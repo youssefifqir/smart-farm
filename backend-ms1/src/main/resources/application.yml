@@ -1,6 +1,7 @@
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/sensor_data
+
     username: username
     password: password
   jpa:

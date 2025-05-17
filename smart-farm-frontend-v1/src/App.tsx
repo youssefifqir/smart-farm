@@ -12,13 +12,24 @@ import RainSensors from './pages/RainSensors';
 import FireDetection from './pages/FireDetection';
 import Temperature from './pages/Temperature';
 import WaterSensors from './pages/WaterSensors';
-
+import StorageManagement from './pages/storage/StorageManagement';
+import ProductManagement from './pages/storage/ProductManagement';
+import CategoryManagement from './pages/storage/CategoryManagement';
+import FournissManagement from './pages/storage/FournissManagement';
+import ClientsManagement from './pages/storage/ClientsManagement';
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<MainLayout />}>
           <Route index element={<Dashboard />} />
+          <Route path="/storage-management" element={<StorageManagement />}>
+            <Route path="products" element={<ProductManagement />} />
+            <Route path="categories" element={<CategoryManagement />} />
+            <Route path="suppliers" element={<FournissManagement />} />
+            <Route path="clients" element={<ClientsManagement />} />
+          </Route>
+
           <Route path="/weather" element={<Weather />} />
           <Route path="/water-management" element={<WaterManagement />} />
           <Route path="/plant-health" element={<PlantHealth />} />
