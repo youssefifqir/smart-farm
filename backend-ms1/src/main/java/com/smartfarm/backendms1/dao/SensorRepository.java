@@ -26,4 +26,17 @@ public interface SensorRepository extends JpaRepository<SensorData, Long> {
     Double findAverageTemperatureBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
 
+    // Moyenne de l’humidité entre deux dates
+    @Query("SELECT AVG(s.humidity) FROM SensorData s WHERE s.timestamp BETWEEN :start AND :end")
+    Double findAverageHumidityBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    // Moyenne de l’humidité du sol entre deux dates
+    @Query("SELECT AVG(s.soilMoisture) FROM SensorData s WHERE s.timestamp BETWEEN :start AND :end")
+    Double findAverageSoilMoistureBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    // Moyenne de la consommation d’eau entre deux dates
+    @Query("SELECT AVG(s.waterConsumption) FROM SensorData s WHERE s.timestamp BETWEEN :start AND :end")
+    Double findAverageWaterConsumptionBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+
 }
