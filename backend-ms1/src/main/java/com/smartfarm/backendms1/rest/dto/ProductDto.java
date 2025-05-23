@@ -14,5 +14,5 @@ public class ProductDto {
     private BigDecimal price;
     private Category category;
 
-    // Getters & Setters
+
 }
