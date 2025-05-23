@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
 import Dashboard from './pages/Dashboard';
+import Notifications from './pages/Notifications';
 import Weather from './pages/Weather';
 import WaterManagement from './pages/WaterManagement';
 import PlantHealth from './pages/PlantHealth';
@@ -19,6 +20,7 @@ function App() {
       <Routes>
         <Route path="/" element={<MainLayout />}>
           <Route index element={<Dashboard />} />
+          <Route path="/notifications" element={<Notifications />} />
           <Route path="/weather" element={<Weather />} />
           <Route path="/water-management" element={<WaterManagement />} />
           <Route path="/plant-health" element={<PlantHealth />} />
