@@ -16,9 +16,7 @@ const ProfitabilityDashboard: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
 
     // États pour les différentes données
-    const [mergedData, setMergedData] = useState<MonthlyFinancial[]>([]);
-    //const [costData, setConstData] = useState<MonthlyFinancial[]>([]);
-    //const [profitData, setProfitData] = useState<MonthlyFinancial[]>([]);
+    const [mergedData, setMergedData] = useState<any[]>([]);
     const [resourceUsageData, setResourceUsageData] = useState<ResourceUsage[]>([]);
     const [cropProfitabilityData, setCropProfitabilityData] = useState<CropProfitability[]>([]);
     const [waterEfficiencyData, setWaterEfficiencyData] = useState<WaterEfficiency[]>([]);
@@ -67,26 +65,31 @@ const ProfitabilityDashboard: React.FC = () => {
             const { startDate, endDate } = getDateRange();
             const currentYear = new Date().getFullYear();
 
-            // Chargement des données financières mensuelles
-            const financialData = await profitabilityService.getMonthlyFinancialData(currentYear);
+            let financialData;
+
+            // Chargement des données financières selon le timeFrame
+            if (timeFrame === 'weekly') {
+                financialData = await profitabilityService.getWeeklyFinancialData();
+            } else if (timeFrame === 'monthly') {
+                financialData = await profitabilityService.getMonthlyFinancialData(currentYear);
+            } else if (timeFrame === 'yearly') {
+                financialData = await profitabilityService.getYearlyFinancialData();
+            }
+
             if (financialData && Array.isArray(financialData)) {
                 setMergedData(
                     financialData.map(item => ({
-                        name: item.name,          // nom du mois
+                        name: item.name,          // nom de la période (jour, mois, année)
                         revenus: item.revenue,    // clé pour le graphique de revenus
                         couts: item.cost,         // clé pour le graphique de coûts
                         profit: item.profit       // clé pour le graphique de profit
                     }))
                 );
-
-                //setProfitData(
-                    //financialData.map(item => ({
-                      //  name: item.name,
-                    //    value: item.profit
-                  //  }))
-                //);
+            } else {
+                // Données de démonstration en cas d'absence de données
+                const demoData = generateDemoData(timeFrame);
+                setMergedData(demoData);
             }
-
 
             // Chargement des données d'utilisation des ressources
             const resourceData = await profitabilityService.getResourceUsageData(startDate, endDate);
@@ -129,31 +132,10 @@ const ProfitabilityDashboard: React.FC = () => {
             console.error("Erreur lors du chargement des données", err);
             setError("Impossible de charger les données. Veuillez réessayer plus tard.");
 
-            // Données de démonstration en cas d'erreur
-            setRevenueData([
-                { name: 'Jan', value: 4000 },
-                { name: 'Fév', value: 3000 },
-                { name: 'Mar', value: 5000 },
-                { name: 'Avr', value: 7000 },
-                { name: 'Mai', value: 6000 },
-                { name: 'Jun', value: 8000 },
-            ]);
-            setConstData([
-                { name: 'Jan', value: 3000 },
-                { name: 'Fév', value: 2700 },
-                { name: 'Mar', value: 4200 },
-                { name: 'Avr', value: 5500 },
-                { name: 'Mai', value: 5200 },
-                { name: 'Jun', value: 6000 },
-            ]);
-            setProfitData([
-                { name: 'Jan', value: 1000 },
-                { name: 'Fév', value: 300 },
-                { name: 'Mar', value: 800 },
-                { name: 'Avr', value: 1500 },
-                { name: 'Mai', value: 800 },
-                { name: 'Jun', value: 2000 },
-            ]);
+            // Générer des données de démonstration en cas d'erreur
+            const demoData = generateDemoData(timeFrame);
+            setMergedData(demoData);
+
             setResourceUsageData([
                 { name: 'Eau', value: 2500, color: '#3b82f6' },
                 { name: 'Électricité', value: 1800, color: '#eab308' },
@@ -161,18 +143,21 @@ const ProfitabilityDashboard: React.FC = () => {
                 { name: 'Engrais', value: 1200, color: '#22c55e' },
                 { name: 'Autres', value: 800, color: '#a855f7' },
             ]);
+
             setCropProfitabilityData([
                 { name: 'Tomates', revenue: 5200, cost: 3100, profit: 2100 },
                 { name: 'Laitue', revenue: 3800, cost: 2200, profit: 1600 },
                 { name: 'Concombres', revenue: 4500, cost: 2800, profit: 1700 },
                 { name: 'Poivrons', revenue: 6200, cost: 4100, profit: 2100 },
             ]);
+
             setWaterEfficiencyData([
                 { name: 'Zone A', efficiency: 0.85, usage: 1200 },
                 { name: 'Zone B', efficiency: 0.72, usage: 1800 },
                 { name: 'Zone C', efficiency: 0.91, usage: 950 },
                 { name: 'Zone D', efficiency: 0.78, usage: 1500 },
             ]);
+
             setKpis({
                 totalRevenue: 33000,
                 totalCost: 26600,
@@ -188,6 +173,56 @@ const ProfitabilityDashboard: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    // Fonction pour générer des données de démonstration selon le timeFrame
+    const generateDemoData = (timeFrame) => {
+        if (timeFrame === 'weekly') {
+            // Données pour les 7 derniers jours de la semaine
+            return [
+                { name: 'Lundi', revenus: 800, couts: 600, profit: 200 },
+                { name: 'Mardi', revenus: 850, couts: 620, profit: 230 },
+                { name: 'Mercredi', revenus: 920, couts: 680, profit: 240 },
+                { name: 'Jeudi', revenus: 880, couts: 650, profit: 230 },
+                { name: 'Vendredi', revenus: 950, couts: 680, profit: 270 },
+                { name: 'Samedi', revenus: 1000, couts: 720, profit: 280 },
+                { name: 'Dimanche', revenus: 780, couts: 580, profit: 200 }
+            ];
+        } else if (timeFrame === 'monthly') {
+            // Données mensuelles pour l'année en cours
+            return [
+                { name: 'Jan', revenus: 4000, couts: 3000, profit: 1000 },
+                { name: 'Fév', revenus: 3000, couts: 2700, profit: 300 },
+                { name: 'Mar', revenus: 5000, couts: 4200, profit: 800 },
+                { name: 'Avr', revenus: 7000, couts: 5500, profit: 1500 },
+                { name: 'Mai', revenus: 6000, couts: 5200, profit: 800 },
+                { name: 'Jun', revenus: 8000, couts: 6000, profit: 2000 },
+                { name: 'Jul', revenus: 7800, couts: 5900, profit: 1900 },
+                { name: 'Aoû', revenus: 9000, couts: 6800, profit: 2200 },
+                { name: 'Sep', revenus: 8500, couts: 6400, profit: 2100 },
+                { name: 'Oct', revenus: 7200, couts: 5600, profit: 1600 },
+                { name: 'Nov', revenus: 8800, couts: 6600, profit: 2200 },
+                { name: 'Déc', revenus: 9500, couts: 7000, profit: 2500 }
+            ];
+        } else if (timeFrame === 'yearly') {
+            // Données annuelles sur 5 ans
+            return [
+                { name: '2021', revenus: 48000, couts: 40000, profit: 8000 },
+                { name: '2022', revenus: 52000, couts: 43000, profit: 9000 },
+                { name: '2023', revenus: 58000, couts: 47000, profit: 11000 },
+                { name: '2024', revenus: 65000, couts: 52000, profit: 13000 },
+                { name: '2025', revenus: 72000, couts: 57000, profit: 15000 }
+            ];
+        }
+        // Par défaut, retourner des données mensuelles
+        return [
+            { name: 'Jan', revenus: 4000, couts: 3000, profit: 1000 },
+            { name: 'Fév', revenus: 3000, couts: 2700, profit: 300 },
+            { name: 'Mar', revenus: 5000, couts: 4200, profit: 800 },
+            { name: 'Avr', revenus: 7000, couts: 5500, profit: 1500 },
+            { name: 'Mai', revenus: 6000, couts: 5200, profit: 800 },
+            { name: 'Jun', revenus: 8000, couts: 6000, profit: 2000 }
+        ];
     };
 
     // Fonction pour générer un rapport (quotidien ou mensuel)
@@ -215,6 +250,18 @@ const ProfitabilityDashboard: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    // Obtenir un titre adapté pour les graphiques selon le timeFrame
+    const getChartTitle = (baseTitle) => {
+        if (timeFrame === 'weekly') {
+            return `${baseTitle} (Hebdomadaire)`;
+        } else if (timeFrame === 'monthly') {
+            return `${baseTitle} (Mensuel)`;
+        } else if (timeFrame === 'yearly') {
+            return `${baseTitle} (Annuel)`;
+        }
+        return baseTitle;
     };
 
     // Charger les données au chargement initial et lors du changement de timeFrame
@@ -314,7 +361,7 @@ const ProfitabilityDashboard: React.FC = () => {
                             </div>
                             <div className="mt-4 flex items-center text-sm text-green-600">
                                 <TrendingUp size={16} />
-                                <span className="ml-1">+{kpis.revenueGrowth}% par rapport au mois dernier</span>
+                                <span className="ml-1">+{kpis.revenueGrowth}% par rapport à la période précédente</span>
                             </div>
                         </div>
 
@@ -330,7 +377,7 @@ const ProfitabilityDashboard: React.FC = () => {
                             </div>
                             <div className="mt-4 flex items-center text-sm text-red-600">
                                 <TrendingUp size={16} />
-                                <span className="ml-1">+{kpis.costGrowth}% par rapport au mois dernier</span>
+                                <span className="ml-1">+{kpis.costGrowth}% par rapport à la période précédente</span>
                             </div>
                         </div>
 
@@ -346,7 +393,7 @@ const ProfitabilityDashboard: React.FC = () => {
                             </div>
                             <div className="mt-4 flex items-center text-sm text-green-600">
                                 <TrendingUp size={16} />
-                                <span className="ml-1">+{kpis.profitGrowth}% par rapport au mois dernier</span>
+                                <span className="ml-1">+{kpis.profitGrowth}% par rapport à la période précédente</span>
                             </div>
                         </div>
 
@@ -362,7 +409,7 @@ const ProfitabilityDashboard: React.FC = () => {
                             </div>
                             <div className="mt-4 flex items-center text-sm text-green-600">
                                 <TrendingUp size={16} />
-                                <span className="ml-1">+{kpis.marginGrowth}% par rapport au mois dernier</span>
+                                <span className="ml-1">+{kpis.marginGrowth}% par rapport à la période précédente</span>
                             </div>
                         </div>
                     </div>
@@ -370,7 +417,7 @@ const ProfitabilityDashboard: React.FC = () => {
                     {/* Graphiques de revenus et coûts */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                         <div className="bg-white p-6 rounded-xl shadow">
-                            <h2 className="text-xl font-bold mb-4">Revenus vs Coûts</h2>
+                            <h2 className="text-xl font-bold mb-4">{getChartTitle("Revenus vs Coûts")}</h2>
                             <ResponsiveContainer width="100%" height={300}>
                                 <LineChart data={mergedData}>
                                     <CartesianGrid strokeDasharray="3 3" />
@@ -385,7 +432,7 @@ const ProfitabilityDashboard: React.FC = () => {
                         </div>
 
                         <div className="bg-white p-6 rounded-xl shadow">
-                            <h2 className="text-xl font-bold mb-4">Profit Mensuel</h2>
+                            <h2 className="text-xl font-bold mb-4">{getChartTitle("Profit")}</h2>
                             <ResponsiveContainer width="100%" height={300}>
                                 <BarChart data={mergedData}>
                                     <CartesianGrid strokeDasharray="3 3" />

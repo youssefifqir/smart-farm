@@ -208,4 +208,25 @@ public class ProfitabilityRestController {
         Map<String, Object> kpis = profitabilityService.getDashboardKPIs(startDate, endDate);
         return new ResponseEntity<>(kpis, HttpStatus.OK);
     }
+
+    /**
+     * Obtenir les données financières hebdomadaires pour l'affichage des graphiques
+     * @return Liste des données financières hebdomadaires
+     */
+    @GetMapping("/weekly-financial-data")
+    public ResponseEntity<List<WeeklyFinancial>> getWeeklyFinancialData() {
+        List<WeeklyFinancial> data = profitabilityService.getWeeklyFinancialData();
+        return new ResponseEntity<>(data, HttpStatus.OK);
+    }
+
+    /**
+     * Obtenir les données financières annuelles pour l'affichage des graphiques
+     * @return Liste des données financières annuelles
+     */
+    @GetMapping("/yearly-financial-data")
+    public ResponseEntity<List<YearlyFinancial>> getYearlyFinancialData() {
+        List<YearlyFinancial> data = profitabilityService.getYearlyFinancialData();
+        return new ResponseEntity<>(data, HttpStatus.OK);
+    }
+
 }

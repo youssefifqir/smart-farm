@@ -21,7 +21,7 @@ const ms2Api = axios.create({
     }
 });
 
-// Types basés sur le backend
+// Types adaptés pour correspondre au composant ProfitabilityDashboard
 export interface ProfitabilityReportDto {
     id: number;
     creationDate: string;
@@ -34,70 +34,43 @@ export interface ProfitabilityReportDto {
 }
 
 export interface MonthlyFinancial {
-    name: string;
-    value: number;
+    name: string;       // Nom du mois (Jan, Fév, etc.)
+    revenue: number;    // Revenus pour ce mois
+    cost: number;       // Coûts pour ce mois
+    profit: number;     // Profit pour ce mois
 }
 
 export interface ResourceUsage {
-    name: string;
-    value: number;
-    color: string;
+    name: string;       // Nom de la ressource (Eau, Électricité, etc.)
+    value: number;      // Valeur/quantité utilisée
+    color: string;      // Couleur pour les graphiques
 }
 
 export interface CropProfitability {
-    name: string;
-    revenue: number;
-    cost: number;
-    profit: number;
+    name: string;       // Nom de la culture
+    revenue: number;    // Revenus générés par cette culture
+    cost: number;       // Coûts associés à cette culture
+    profit: number;     // Profit réalisé sur cette culture
 }
 
 export interface WaterEfficiency {
-    name: string;
-    efficiency: number;
-    usage: number;
+    name: string;       // Nom de la zone
+    efficiency: number; // Efficacité de l'eau (entre 0 et 1)
+    usage: number;      // Quantité d'eau utilisée (en L)
 }
 
-// MS1 API services (sensor data)
-export const sensorService = {
-    // Get all current sensor readings
-    getCurrentReadings: async () => {
-        try {
-            const response = await ms1Api.get('/sensors/current');
-            return response.data;
-        } catch (error) {
-            console.error('Error fetching current sensor readings:', error);
-            throw error;
-        }
-    },
-
-    // Get historical sensor data with optional filters
-    getHistoricalData: async (params: {
-        startDate?: string;
-        endDate?: string;
-        sensorIds?: string[];
-        page?: number;
-        limit?: number;
-    }) => {
-        try {
-            const response = await ms1Api.get('/sensors/history', { params });
-            return response.data;
-        } catch (error) {
-            console.error('Error fetching historical sensor data:', error);
-            throw error;
-        }
-    },
-
-    // Get active alerts
-    getAlerts: async () => {
-        try {
-            const response = await ms1Api.get('/alerts');
-            return response.data;
-        } catch (error) {
-            console.error('Error fetching alerts:', error);
-            throw error;
-        }
-    }
-};
+export interface DashboardKPIs {
+    totalRevenue: number;
+    totalCost: number;
+    totalProfit: number;
+    profitMargin: number;
+    revenueGrowth: number;
+    costGrowth: number;
+    profitGrowth: number;
+    marginGrowth: number;
+    waterUsage: number;
+    energyUsage: number;
+}
 
 // Service de rentabilité pour lier avec le backend MS1
 export const profitabilityService = {
@@ -127,50 +100,13 @@ export const profitabilityService = {
         }
     },
 
-    // Récupérer un rapport par ID
-    getReportById: async (id: number) => {
+    // Récupérer les données financières hebdomadaires
+    getWeeklyFinancialData: async () => {
         try {
-            const response = await ms1Api.get(`/${id}`);
+            const response = await ms1Api.get('/weekly-financial-data');
             return response.data;
         } catch (error) {
-            console.error(`Erreur lors de la récupération du rapport #${id}:`, error);
-            throw error;
-        }
-    },
-
-    // Récupérer tous les rapports
-    getAllReports: async () => {
-        try {
-            const response = await ms1Api.get('/all');
-            return response.data;
-        } catch (error) {
-            console.error('Erreur lors de la récupération de tous les rapports:', error);
-            throw error;
-        }
-    },
-
-    // Récupérer les rapports entre deux dates
-    getReportsByDateRange: async (startDate: string, endDate: string) => {
-        try {
-            const response = await ms1Api.get('/date-range', {
-                params: { startDate, endDate }
-            });
-            return response.data;
-        } catch (error) {
-            console.error('Erreur lors de la récupération des rapports par plage de dates:', error);
-            throw error;
-        }
-    },
-
-    // Calculer le ROI
-    calculateROI: async (startDate: string, endDate: string) => {
-        try {
-            const response = await ms1Api.get('/roi', {
-                params: { startDate, endDate }
-            });
-            return response.data;
-        } catch (error) {
-            console.error('Erreur lors du calcul du ROI:', error);
+            console.error('Erreur lors de la récupération des données financières hebdomadaires:', error);
             throw error;
         }
     },
@@ -184,6 +120,17 @@ export const profitabilityService = {
             return response.data;
         } catch (error) {
             console.error('Erreur lors de la récupération des données financières mensuelles:', error);
+            throw error;
+        }
+    },
+
+    // Récupérer les données financières annuelles
+    getYearlyFinancialData: async () => {
+        try {
+            const response = await ms1Api.get('/yearly-financial-data');
+            return response.data;
+        } catch (error) {
+            console.error('Erreur lors de la récupération des données financières annuelles:', error);
             throw error;
         }
     },
@@ -236,10 +183,58 @@ export const profitabilityService = {
             console.error('Erreur lors de la récupération des KPIs du tableau de bord:', error);
             throw error;
         }
+    },
+
+    // Récupérer un rapport par ID
+    getReportById: async (id: number) => {
+        try {
+            const response = await ms1Api.get(`/${id}`);
+            return response.data;
+        } catch (error) {
+            console.error(`Erreur lors de la récupération du rapport #${id}:`, error);
+            throw error;
+        }
+    },
+
+    // Récupérer tous les rapports
+    getAllReports: async () => {
+        try {
+            const response = await ms1Api.get('/all');
+            return response.data;
+        } catch (error) {
+            console.error('Erreur lors de la récupération de tous les rapports:', error);
+            throw error;
+        }
+    },
+
+    // Récupérer les rapports entre deux dates
+    getReportsByDateRange: async (startDate: string, endDate: string) => {
+        try {
+            const response = await ms1Api.get('/date-range', {
+                params: { startDate, endDate }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Erreur lors de la récupération des rapports par plage de dates:', error);
+            throw error;
+        }
+    },
+
+    // Calculer le ROI
+    calculateROI: async (startDate: string, endDate: string) => {
+        try {
+            const response = await ms1Api.get('/roi', {
+                params: { startDate, endDate }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Erreur lors du calcul du ROI:', error);
+            throw error;
+        }
     }
 };
 
-// MS2 API services (predictions)
+// MS2 API services (predictions) - conservés pour référence
 export const predictionService = {
     // Get disease predictions
     getDiseasePredictions: async () => {
@@ -270,6 +265,48 @@ export const predictionService = {
             return response.data;
         } catch (error) {
             console.error('Error fetching crop yield predictions:', error);
+            throw error;
+        }
+    }
+};
+
+// On conserve également le service de capteurs, qui pourrait être utilisé dans d'autres composants
+export const sensorService = {
+    // Get all current sensor readings
+    getCurrentReadings: async () => {
+        try {
+            const response = await ms1Api.get('/sensors/current');
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching current sensor readings:', error);
+            throw error;
+        }
+    },
+
+    // Get historical sensor data with optional filters
+    getHistoricalData: async (params: {
+        startDate?: string;
+        endDate?: string;
+        sensorIds?: string[];
+        page?: number;
+        limit?: number;
+    }) => {
+        try {
+            const response = await ms1Api.get('/sensors/history', { params });
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching historical sensor data:', error);
+            throw error;
+        }
+    },
+
+    // Get active alerts
+    getAlerts: async () => {
+        try {
+            const response = await ms1Api.get('/alerts');
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching alerts:', error);
             throw error;
         }
     }

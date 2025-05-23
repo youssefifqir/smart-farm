@@ -60,4 +60,6 @@ public interface ProfitabilityService {
     List<CropProfitability> getCropProfitabilityData(LocalDate startDate, LocalDate endDate);
     List<WaterEfficiency> getWaterEfficiencyData();
     Map<String, Object> getDashboardKPIs(LocalDate startDate, LocalDate endDate);
+    List<WeeklyFinancial> getWeeklyFinancialData();
+    List<YearlyFinancial> getYearlyFinancialData();
 }
