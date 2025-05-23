@@ -1,21 +1,18 @@
-
-
 // import { useState, useEffect, ReactNode } from 'react';
-// import { Cloud, CloudRain, CloudDrizzle, Sun, Wind, Thermometer, CloudSnow, AlertTriangle } from 'lucide-react';
+// import { Cloud, CloudRain, CloudDrizzle, Sun, Wind, Thermometer, CloudSnow, AlertTriangle, ChevronRight } from 'lucide-react';
+// import { useNavigate } from 'react-router-dom';
 // import useWebSocket from '../../hooks/useWebSocket';
 // import { WS_BASE_URL } from '../../services/api';
 
 // type Weather = {
 //   day: string;
 //   temp: string;
-//   tempMax: number;
-//   tempMin: number;
 //   condition: string;
-//   precipitation: number;
 //   icon: ReactNode;
 // };
 
 // const WeatherForecast = () => {
+//   const navigate = useNavigate();
 //   const { weatherData, connectionStatus } = useWebSocket(WS_BASE_URL);
 //   const [forecast, setForecast] = useState<Weather[]>([]);
 
@@ -112,10 +109,7 @@
 //         return {
 //           day: formatDate(time),
 //           temp: `${avgTemp}°`,
-//           tempMax,
-//           tempMin,
 //           condition: getWeatherCondition(precipitation, avgTemp),
-//           precipitation,
 //           icon: getWeatherIcon(precipitation, avgTemp, 32)
 //         };
 //       });
@@ -152,13 +146,13 @@
 //     <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100">
 //       <div className="flex items-center justify-between mb-4">
 //         <h2 className="text-lg font-semibold text-gray-800">Weather Forecast</h2>
-//         <div className="flex items-center space-x-2">
-//           <div className={`w-2 h-2 rounded-full ${
-//             connectionStatus === 'connected' ? 'bg-green-500' : 
-//             connectionStatus === 'connecting' ? 'bg-yellow-500' : 'bg-red-500'
-//           }`}></div>
-//           <span className="text-xs text-gray-500 capitalize">{connectionStatus}</span>
-//         </div>
+//         <button
+//           onClick={() => navigate('/weather')}
+//           className="flex items-center space-x-1 text-sm text-green-600 hover:text-green-700 transition-colors"
+//         >
+//           <span>View Details</span>
+//           <ChevronRight size={16} />
+//         </button>
 //       </div>
       
 //       <div className="grid grid-cols-5 gap-2">
@@ -175,27 +169,9 @@
 //             <span className="text-xs text-gray-500 text-center leading-tight">
 //               {item.condition}
 //             </span>
-//             {item.precipitation > 0 && (
-//               <span className="text-xs text-blue-600 mt-1 flex items-center">
-//                 <CloudRain size={10} className="mr-1" />
-//                 {item.precipitation.toFixed(1)}mm
-//               </span>
-//             )}
-//             <div className="text-xs text-gray-400 mt-1">
-//               H: {Math.round(item.tempMax)}° L: {Math.round(item.tempMin)}°
-//             </div>
 //           </div>
 //         ))}
 //       </div>
-      
-//       {weatherData && (
-//         <div className="mt-4 pt-3 border-t border-gray-100">
-//           <div className="flex items-center justify-between text-xs text-gray-500">
-//             <span>Location: {weatherData.latitude.toFixed(2)}°, {weatherData.longitude.toFixed(2)}°</span>
-//             <span>{weatherData.timezone}</span>
-//           </div>
-//         </div>
-//       )}
 //     </div>
 //   );
 // };
@@ -375,6 +351,10 @@ const WeatherForecast = () => {
             </span>
           </div>
         ))}
+      </div>
+      
+      <div className="mt-3 text-center">
+        <span className="text-xs text-gray-400">Average daily temperatures</span>
       </div>
     </div>
   );
