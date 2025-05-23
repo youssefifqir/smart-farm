@@ -1,8 +1,8 @@
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/sensor_data
-    username: username
-    password: password
+    username: postgres
+    password: simo
   jpa:
     hibernate:
       ddl-auto: update
