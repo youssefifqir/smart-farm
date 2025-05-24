@@ -1,4 +1,5 @@
 import { AlertTriangle, CloudRain, Brush as Virus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 type Alert = {
   id: string;
@@ -6,30 +7,36 @@ type Alert = {
   title: string;
   description: string;
   icon: React.ReactNode;
+  time: string;
 };
 
 const AlertsPanel = () => {
+  const navigate = useNavigate();
+
   const alerts: Alert[] = [
     {
       id: 'fire-risk',
       type: 'danger',
-      title: 'Fire Risk Alert',
-      description: 'High temperature detected in Sector B. Fire risk level: Moderate.',
-      icon: <AlertTriangle className="text-red-500" />
+      title: 'Fire risk',
+      description: 'High temperature detected in Sector B.',
+      icon: <AlertTriangle className="text-red-500" />,
+      time: '14:30'
     },
     {
       id: 'rain-detected',
       type: 'info',
-      title: 'Rain Detected',
-      description: 'Rain detected in Sector A. Irrigation system paused.',
-      icon: <CloudRain className="text-blue-500" />
+      title: 'Rain detected',
+      description: 'Irrigation system paused.',
+      icon: <CloudRain className="text-blue-500" />,
+      time: '12:15'
     },
     {
       id: 'disease-risk',
       type: 'warning',
-      title: 'Disease Risk',
-      description: 'Potential fungal disease risk in tomato plants due to high humidity.',
-      icon: <Virus className="text-amber-500" />
+      title: 'Disease risk',
+      description: 'Fungal risk detected on tomato plants.',
+      icon: <Virus className="text-amber-500" />,
+      time: '09:45'
     }
   ];
 
@@ -58,10 +65,19 @@ const AlertsPanel = () => {
               <div>
                 <h3 className="font-medium text-gray-900">{alert.title}</h3>
                 <p className="text-sm text-gray-700 mt-1">{alert.description}</p>
+                <p className="text-xs text-gray-400 mt-1">{alert.time}</p>
               </div>
             </div>
           </div>
         ))}
+      </div>
+      <div className="mt-6 pt-4 border-t border-gray-200">
+        <button
+          onClick={() => navigate('/notifications')}
+          className="w-full px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors duration-200"
+        >
+          View all notifications
+        </button>
       </div>
     </div>
   );

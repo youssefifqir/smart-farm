@@ -10,45 +10,77 @@ import AlertsPanel from '../components/dashboard/AlertsPanel';
 type Alert = {
   id: string;
   type: 'danger' | 'warning' | 'info';
+  category: string;
   title: string;
   description: string;
   time: string;
+  location: string;
   icon: React.ReactNode;
+  status: string;
+  priority: string;
+  timestamp: Date;
 };
 
 const Dashboard = () => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const navigate = useNavigate();
 
-  // Alertes récentes (limite à 5 pour le dropdown)
-  const recentAlerts: Alert[] = [
+  const [alerts, setAlerts] = useState<Alert[]>([
     {
-      id: 'fire-risk',
+      id: 'fire-risk-001',
       type: 'danger',
-      title: 'Risque d\'incendie',
-      description: 'Température élevée détectée dans le Secteur B',
+      category: 'fire',
+      title: 'Fire risk detected',
+      description: 'High temperature detected in Sector B. Risk level: Moderate.',
       time: '14:30',
-      icon: <Flame className="text-red-500" size={16} />
+      location: 'Sector B',
+      icon: <Flame className="text-red-500" />,
+      status: 'active',
+      priority: 'high',
+      timestamp: new Date()
     },
     {
-      id: 'rain-detected',
+      id: 'rain-002',
       type: 'info',
-      title: 'Pluie détectée',
-      description: 'Système d\'irrigation mis en pause',
+      category: 'weather',
+      title: 'Rain detected',
+      description: 'Rain detected in Sector A. Irrigation system paused.',
       time: '12:15',
-      icon: <CloudRain className="text-blue-500" size={16} />
+      location: 'Sector A',
+      icon: <CloudRain className="text-blue-500" />,
+      status: 'acknowledged',
+      priority: 'medium',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000)
     },
     {
-      id: 'disease-risk',
+      id: 'disease-003',
       type: 'warning',
-      title: 'Risque de maladie',
-      description: 'Risque fongique sur les plants de tomates',
+      category: 'disease',
+      title: 'Disease risk',
+      description: 'Potential fungal disease risk on tomato plants due to high humidity.',
       time: '09:45',
-      icon: <Brush className="text-amber-500" size={16} />
+      location: 'Main greenhouse',
+      icon: <Brush className="text-amber-500" />,
+      status: 'active',
+      priority: 'medium',
+      timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000)
+    },
+    {
+      id: 'temp-004',
+      type: 'warning',
+      category: 'weather',
+      title: 'Temperature alert',
+      description: 'Abnormally high temperature detected by the sensor in Sector C.',
+      time: '08:20',
+      location: 'Sector C',
+      icon: <Thermometer className="text-orange-500" />,
+      status: 'resolved',
+      priority: 'low',
+      timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000)
     }
-  ];
+  ]);
 
-  const activeAlertsCount = recentAlerts.filter(alert => alert.type === 'danger' || alert.type === 'warning').length;
+  const activeAlertsCount = alerts.filter(alert => alert.type === 'danger' || alert.type === 'warning').length;
 
   const handleViewAllNotifications = () => {
     setIsNotificationOpen(false);
@@ -68,10 +100,10 @@ const Dashboard = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-          <p className="text-gray-600">Bienvenue dans votre système de surveillance Smart Farm.</p>
+          <p className="text-gray-600">Welcome to your Smart Farm monitoring system.</p>
         </div>
         
-        {/* Bouton de notification intégré */}
+        {/* Integrated notification button */}
         <div className="relative">
           <button
             onClick={() => setIsNotificationOpen(!isNotificationOpen)}
@@ -87,27 +119,27 @@ const Dashboard = () => {
 
           {isNotificationOpen && (
             <>
-              {/* Overlay pour fermer en cliquant à côté */}
+              {/* Overlay to close when clicking outside */}
               <div 
                 className="fixed inset-0 z-10" 
                 onClick={() => setIsNotificationOpen(false)}
               />
               
-              {/* Dropdown des notifications */}
+              {/* Notifications dropdown */}
               <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
                 <div className="p-4 border-b border-gray-100">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-gray-800">Notifications</h3>
                     <span className="text-sm text-gray-500">
-                      {recentAlerts.length} nouvelle{recentAlerts.length !== 1 ? 's' : ''}
+                      {alerts.length} new alert{alerts.length !== 1 ? 's' : ''}
                     </span>
                   </div>
                 </div>
 
                 <div className="max-h-96 overflow-y-auto">
-                  {recentAlerts.length > 0 ? (
+                  {alerts.length > 0 ? (
                     <div className="divide-y divide-gray-100">
-                      {recentAlerts.map((alert) => (
+                      {alerts.map((alert) => (
                         <div 
                           key={alert.id}
                           className={`p-4 border-l-4 ${getAlertBgColor(alert.type)} hover:bg-gray-50 cursor-pointer transition-colors`}
@@ -133,7 +165,7 @@ const Dashboard = () => {
                   ) : (
                     <div className="p-6 text-center">
                       <Bell className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                      <p className="text-sm text-gray-500">Aucune notification</p>
+                      <p className="text-sm text-gray-500">No notifications</p>
                     </div>
                   )}
                 </div>
@@ -143,7 +175,7 @@ const Dashboard = () => {
                     onClick={handleViewAllNotifications}
                     className="w-full text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
                   >
-                    Voir toutes les notifications
+                    View all notifications
                   </button>
                 </div>
               </div>
@@ -152,6 +184,17 @@ const Dashboard = () => {
         </div>
       </div>
       
+      {/* Filter buttons */}
+      <div className="flex space-x-2">
+        <button>All ({alerts.length})</button>
+        <button>Active ({alerts.filter(alert => alert.status === 'active').length})</button>
+        <button>Fire ({alerts.filter(alert => alert.category === 'fire').length})</button>
+        <button>Weather ({alerts.filter(alert => alert.category === 'weather').length})</button>
+        <button>Diseases ({alerts.filter(alert => alert.category === 'disease').length})</button>
+        <button>Sensors ({alerts.filter(alert => alert.category === 'sensor').length})</button>
+        <button>Water ({alerts.filter(alert => alert.category === 'water').length})</button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <DataCard 
           title="Temperature" 

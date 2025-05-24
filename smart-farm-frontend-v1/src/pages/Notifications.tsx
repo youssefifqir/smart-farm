@@ -21,10 +21,10 @@ const Notifications = () => {
       id: 'fire-risk',
       type: 'danger',
       category: 'fire',
-      title: 'Risque d\'incendie détecté',
-      description: 'Température élevée détectée dans le Secteur B. Niveau de risque: Modéré.',
+      title: 'Fire risk detected',
+      description: 'High temperature detected in Sector B. Risk level: Moderate.',
       time: '14:30',
-      location: 'Secteur B',
+      location: 'Sector B',
       icon: <Flame className="text-red-500" />,
       status: 'active',
       priority: 'high'
@@ -33,10 +33,10 @@ const Notifications = () => {
       id: 'rain-detected',
       type: 'info',
       category: 'weather',
-      title: 'Pluie détectée',
-      description: 'Pluie détectée dans le Secteur A. Système d\'irrigation mis en pause.',
+      title: 'Rain detected',
+      description: 'Rain detected in Sector A. Irrigation system paused.',
       time: '12:15',
-      location: 'Secteur A',
+      location: 'Sector A',
       icon: <CloudRain className="text-blue-500" />,
       status: 'acknowledged',
       priority: 'medium'
@@ -45,10 +45,10 @@ const Notifications = () => {
       id: 'disease-risk',
       type: 'warning',
       category: 'disease',
-      title: 'Risque de maladie',
-      description: 'Risque potentiel de maladie fongique sur les plants de tomates en raison de l\'humidité élevée.',
+      title: 'Disease risk',
+      description: 'Potential fungal disease risk on tomato plants due to high humidity.',
       time: '09:45',
-      location: 'Serre principale',
+      location: 'Main greenhouse',
       icon: <Brush className="text-amber-500" />,
       status: 'active',
       priority: 'medium'
@@ -57,10 +57,10 @@ const Notifications = () => {
       id: 'temperature-alert',
       type: 'warning',
       category: 'sensor',
-      title: 'Alerte température',
-      description: 'Température anormalement élevée détectée par le capteur du Secteur C.',
+      title: 'Temperature alert',
+      description: 'Abnormally high temperature detected by the sensor in Sector C.',
       time: '08:20',
-      location: 'Secteur C',
+      location: 'Sector C',
       icon: <Thermometer className="text-orange-500" />,
       status: 'resolved',
       priority: 'low'
@@ -69,10 +69,10 @@ const Notifications = () => {
       id: 'water-level',
       type: 'warning',
       category: 'water',
-      title: 'Niveau d\'eau bas',
-      description: 'Le réservoir principal affiche un niveau d\'eau inférieur à 20%.',
+      title: 'Low water level',
+      description: 'The main tank shows a water level below 20%.',
       time: '07:30',
-      location: 'Réservoir principal',
+      location: 'Main tank',
       icon: <AlertTriangle className="text-yellow-500" />,
       status: 'active',
       priority: 'high'
@@ -126,12 +126,12 @@ const Notifications = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-800 flex items-center">
             <Bell className="mr-3 text-blue-600" size={28} />
-            Notifications & Alertes
+            Notifications & Alerts
           </h1>
-          <p className="text-gray-600">Gérez toutes vos alertes et notifications système.</p>
+          <p className="text-gray-600">Manage all your system alerts and notifications.</p>
         </div>
         <div className="bg-blue-100 text-blue-800 px-3 py-2 rounded-full text-sm font-medium">
-          {activeAlerts} alerte{activeAlerts !== 1 ? 's' : ''} active{activeAlerts !== 1 ? 's' : ''}
+          {activeAlerts} active alert{activeAlerts !== 1 ? 's' : ''}
         </div>
       </div>
 
@@ -139,13 +139,13 @@ const Notifications = () => {
       <div className="bg-white p-4 rounded-lg border border-gray-100">
         <div className="flex flex-wrap gap-2">
           {[
-            { key: 'all', label: 'Toutes', count: alerts.length },
-            { key: 'active', label: 'Actives', count: alerts.filter(a => a.status === 'active').length },
-            { key: 'fire', label: 'Incendie', count: alerts.filter(a => a.category === 'fire').length },
-            { key: 'weather', label: 'Météo', count: alerts.filter(a => a.category === 'weather').length },
-            { key: 'disease', label: 'Maladies', count: alerts.filter(a => a.category === 'disease').length },
-            { key: 'sensor', label: 'Capteurs', count: alerts.filter(a => a.category === 'sensor').length },
-            { key: 'water', label: 'Eau', count: alerts.filter(a => a.category === 'water').length }
+            { key: 'all', label: 'All', count: alerts.length },
+            { key: 'active', label: 'Active', count: alerts.filter(a => a.status === 'active').length },
+            { key: 'fire', label: 'Fire', count: alerts.filter(a => a.category === 'fire').length },
+            { key: 'weather', label: 'Weather', count: alerts.filter(a => a.category === 'weather').length },
+            { key: 'disease', label: 'Diseases', count: alerts.filter(a => a.category === 'disease').length },
+            { key: 'sensor', label: 'Sensors', count: alerts.filter(a => a.category === 'sensor').length },
+            { key: 'water', label: 'Water', count: alerts.filter(a => a.category === 'water').length }
           ].map((filterOption) => (
             <button
               key={filterOption.key}
@@ -181,7 +181,7 @@ const Notifications = () => {
                     <div className="flex items-center space-x-2">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(alert.status)}`}>
                         {alert.status === 'active' ? 'Active' : 
-                         alert.status === 'acknowledged' ? 'Reconnue' : 'Résolue'}
+                         alert.status === 'acknowledged' ? 'Acknowledged' : 'Resolved'}
                       </span>
                       <span className="text-xs text-gray-500 flex items-center">
                         <Clock size={12} className="mr-1" />
@@ -198,13 +198,13 @@ const Notifications = () => {
                         onClick={() => handleStatusChange(alert.id, 'acknowledged')}
                         className="px-3 py-1 text-xs bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-colors"
                       >
-                        Marquer comme vue
+                        Mark as seen
                       </button>
                       <button
                         onClick={() => handleStatusChange(alert.id, 'resolved')}
                         className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
                       >
-                        Résoudre
+                        Resolve
                       </button>
                     </div>
                   )}
@@ -218,9 +218,9 @@ const Notifications = () => {
       {getFilteredAlerts().length === 0 && (
         <div className="text-center py-12">
           <CheckCircle className="mx-auto h-12 w-12 text-green-500 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune alerte</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No alerts</h3>
           <p className="text-gray-500">
-            {filter === 'all' ? 'Aucune alerte disponible.' : 'Aucune alerte dans cette catégorie.'}
+            {filter === 'all' ? 'No alerts available.' : 'No alerts in this category.'}
           </p>
         </div>
       )}
