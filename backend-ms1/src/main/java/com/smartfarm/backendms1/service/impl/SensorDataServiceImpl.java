@@ -35,4 +35,16 @@ public class SensorDataServiceImpl implements SensorDataService {
         return sensorRepository.findAll();
     }
 
+
+    @Override
+    public boolean isFireDetected(SensorData data) {
+        // Exemple simple : si la température dépasse 50 degrés
+        return data.getTemperature() > 50;
+    }
+
+    @Override
+    public boolean isRaining(SensorData data) {
+        // Exemple : humidité très élevée
+        return data.getHumidity() > 90;
+    }
 }

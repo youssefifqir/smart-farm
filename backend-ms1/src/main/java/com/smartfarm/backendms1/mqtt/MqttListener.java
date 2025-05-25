@@ -48,6 +48,14 @@ public class MqttListener {
                     SensorData sensorData = objectMapper.readValue(payload, SensorData.class);
                     sensorData.setTimestamp(LocalDateTime.now());
                     sensorDataService.saveSensorData(sensorData);
+                    // Vérification des alertes
+                    if (sensorDataService.isFireDetected(sensorData)) {
+                        sensorDataWebSocketController.sendAlert("Alert: Fire detected !");
+                    }
+                    if (sensorDataService.isRaining(sensorData)) {
+                        sensorDataWebSocketController.sendAlert("Alert: Rain detected !");
+                    }
+
                     sensorDataWebSocketController.sendSensorData(sensorData); // sends to frontend ( websockets right after persisting in db louz dakchi)
                 } catch (Exception e) {
                     System.err.println("Failed to process payload: " + payload);

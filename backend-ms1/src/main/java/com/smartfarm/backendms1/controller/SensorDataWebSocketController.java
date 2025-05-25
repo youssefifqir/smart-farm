@@ -16,4 +16,9 @@ public class SensorDataWebSocketController {
         System.out.println("Sending sensor data via WebSocket: " + sensorData);
         messagingTemplate.convertAndSend("/topic/sensor-data", sensorData);
     }
+
+    public void sendAlert(String alertMessage){
+        System.out.println("Sending alert vai WebSocket: " + alertMessage);
+        messagingTemplate.convertAndSend("/topic/alerts", alertMessage);
+    }
 }

@@ -5,6 +5,7 @@ import com.smartfarm.backendms1.bean.SensorData;
 
 public interface SensorDataService {
     public int saveSensorData(SensorData sensorData);
-
+    boolean isFireDetected(SensorData data);
+    boolean isRaining(SensorData data);
 
 }
