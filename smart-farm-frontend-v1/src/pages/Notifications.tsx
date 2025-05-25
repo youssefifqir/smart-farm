@@ -123,14 +123,16 @@ const Notifications = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center">
-            <Bell className="mr-3 text-blue-600" size={28} />
-            Notifications & Alerts
-          </h1>
-          <p className="text-gray-600">Manage all your system alerts and notifications.</p>
+        <div className="flex items-center">
+          <div className="border-2 border-green-500 text-green-500 rounded-full p-2 mr-3">
+            <Bell size={28} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Notifications & Alerts</h1>
+            <p className="text-gray-600">Manage all your system alerts and notifications.</p>
+          </div>
         </div>
-        <div className="bg-blue-100 text-blue-800 px-3 py-2 rounded-full text-sm font-medium">
+        <div className="bg-green-100 text-green-800 px-3 py-2 rounded-full text-sm font-medium">
           {activeAlerts} active alert{activeAlerts !== 1 ? 's' : ''}
         </div>
       </div>
@@ -152,7 +154,7 @@ const Notifications = () => {
               onClick={() => setFilter(filterOption.key)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 filter === filterOption.key
-                  ? 'bg-blue-500 text-white'
+                  ? 'bg-green-500 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
@@ -196,7 +198,7 @@ const Notifications = () => {
                     <div className="flex space-x-2">
                       <button
                         onClick={() => handleStatusChange(alert.id, 'acknowledged')}
-                        className="px-3 py-1 text-xs bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-colors"
+                        className="px-3 py-1 text-xs bg-gray-300 text-gray-800 rounded hover:bg-gray-400 transition-colors"
                       >
                         Mark as seen
                       </button>

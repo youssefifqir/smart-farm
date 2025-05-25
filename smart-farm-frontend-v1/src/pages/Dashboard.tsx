@@ -1,11 +1,13 @@
-import { useState } from 'react';
-import { Thermometer, Droplets, Waves, Droplet as WaterDroplet, Bell, AlertTriangle, CloudRain, Brush, Flame } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Thermometer, Droplets, Flame, CloudRain, Bell, Brush } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import DataCard from '../components/dashboard/DataCard';
 import WeatherForecast from '../components/dashboard/WeatherForecast';
 import WaterConsumption from '../components/dashboard/WaterConsumption';
 import SensorStatus from '../components/dashboard/SensorStatus';
 import AlertsPanel from '../components/dashboard/AlertsPanel';
+import ConnectionStatus from '../components/ConnectionStatus';
+import useWebSocket from '../hooks/useWebSocket'; 
 
 type Alert = {
   id: string;
@@ -22,6 +24,9 @@ type Alert = {
 };
 
 const Dashboard = () => {
+  // Use HTTP URL instead of WS URL for SockJS
+  const { isConnected, sensorData, connectionStatus, error, reconnect } = useWebSocket('http://localhost:8036/ws');
+  const [previousData, setPreviousData] = useState(null);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -82,6 +87,13 @@ const Dashboard = () => {
 
   const activeAlertsCount = alerts.filter(alert => alert.type === 'danger' || alert.type === 'warning').length;
 
+  // Update previous data for trend calculation
+  useEffect(() => {
+    if (sensorData && JSON.stringify(sensorData) !== JSON.stringify(previousData)) {
+      setPreviousData(sensorData);
+    }
+  }, [sensorData, previousData]);
+
   const handleViewAllNotifications = () => {
     setIsNotificationOpen(false);
     navigate('/notifications');
@@ -95,149 +107,176 @@ const Dashboard = () => {
       default: return 'border-l-gray-500 bg-gray-50';
     }
   };
+
+  // Helper functions for trends
+  const getTemperatureChange = () => {
+    if (!sensorData || !previousData) return null;
+    const diff = sensorData.temperature - previousData.temperature;
+    if (Math.abs(diff) < 0.1) return null;
+    return diff > 0 ? `+${diff.toFixed(1)}°` : `${diff.toFixed(1)}°`;
+  };
+
+  const getHumidityChange = () => {
+    if (!sensorData || !previousData) return null;
+    const diff = sensorData.humidity - previousData.humidity;
+    if (Math.abs(diff) < 1) return null;
+    return diff > 0 ? `+${diff.toFixed(0)}%` : `${diff.toFixed(0)}%`;
+  };
+
+  const getTemperatureTrend = () => {
+    if (!sensorData || !previousData) return 'neutral';
+    const diff = sensorData.temperature - previousData.temperature;
+    return diff > 0.1 ? 'up' : diff < -0.1 ? 'down' : 'neutral';
+  };
+
+  const getHumidityTrend = () => {
+    if (!sensorData || !previousData) return 'neutral';
+    const diff = sensorData.humidity - previousData.humidity;
+    return diff > 1 ? 'up' : diff < -1 ? 'down' : 'neutral';
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-          <p className="text-gray-600">Welcome to your Smart Farm monitoring system.</p>
-        </div>
-        
-        {/* Integrated notification button */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
+        <p className="text-gray-600">Welcome to your Smart Farm monitoring system.</p>
+      </div>
+      
+      {/* Integrated notification button */}
+      <div className="relative">
+        <button
+        onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+        className="relative p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+        <Bell size={24} />
+        {activeAlertsCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+          {activeAlertsCount > 9 ? '9+' : activeAlertsCount}
+          </span>
+        )}
+        </button>
+
+        {isNotificationOpen && (
         <div className="relative">
-          <button
-            onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-            className="relative p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <Bell size={24} />
-            {activeAlertsCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                {activeAlertsCount > 9 ? '9+' : activeAlertsCount}
-              </span>
-            )}
-          </button>
+          {/* Overlay to close when clicking outside */}
+          <div 
+          className="fixed inset-0 z-10" 
+          onClick={() => setIsNotificationOpen(false)}
+          />
+          
+          {/* Notifications dropdown */}
+          <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
+          <div className="p-4 border-b border-gray-100">
+            <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-gray-800">Notifications</h3>
+            <span className="text-sm text-gray-500">
+              {alerts.length} new alert{alerts.length !== 1 ? 's' : ''}
+            </span>
+            </div>
+          </div>
 
-          {isNotificationOpen && (
-            <>
-              {/* Overlay to close when clicking outside */}
+          <div className="max-h-96 overflow-y-auto">
+            {alerts.length > 0 ? (
+            <div className="divide-y divide-gray-100">
+              {alerts.map((alert) => (
               <div 
-                className="fixed inset-0 z-10" 
-                onClick={() => setIsNotificationOpen(false)}
-              />
-              
-              {/* Notifications dropdown */}
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
-                <div className="p-4 border-b border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-800">Notifications</h3>
-                    <span className="text-sm text-gray-500">
-                      {alerts.length} new alert{alerts.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
+                key={alert.id}
+                className={`p-4 border-l-4 ${getAlertBgColor(alert.type)} hover:bg-gray-50 cursor-pointer transition-colors`}
+                onClick={handleViewAllNotifications}
+              >
+                <div className="flex items-start space-x-3">
+                <div className="mt-0.5">{alert.icon}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                  {alert.title}
+                  </p>
+                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                  {alert.description}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2">
+                  {alert.time}
+                  </p>
                 </div>
-
-                <div className="max-h-96 overflow-y-auto">
-                  {alerts.length > 0 ? (
-                    <div className="divide-y divide-gray-100">
-                      {alerts.map((alert) => (
-                        <div 
-                          key={alert.id}
-                          className={`p-4 border-l-4 ${getAlertBgColor(alert.type)} hover:bg-gray-50 cursor-pointer transition-colors`}
-                          onClick={() => handleViewAllNotifications()}
-                        >
-                          <div className="flex items-start space-x-3">
-                            <div className="mt-0.5">{alert.icon}</div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">
-                                {alert.title}
-                              </p>
-                              <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                                {alert.description}
-                              </p>
-                              <p className="text-xs text-gray-500 mt-2">
-                                {alert.time}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-6 text-center">
-                      <Bell className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                      <p className="text-sm text-gray-500">No notifications</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-4 border-t border-gray-100">
-                  <button
-                    onClick={handleViewAllNotifications}
-                    className="w-full text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
-                  >
-                    View all notifications
-                  </button>
                 </div>
               </div>
-            </>
-          )}
-        </div>
-      </div>
-      
-      {/* Filter buttons */}
-      <div className="flex space-x-2">
-        <button>All ({alerts.length})</button>
-        <button>Active ({alerts.filter(alert => alert.status === 'active').length})</button>
-        <button>Fire ({alerts.filter(alert => alert.category === 'fire').length})</button>
-        <button>Weather ({alerts.filter(alert => alert.category === 'weather').length})</button>
-        <button>Diseases ({alerts.filter(alert => alert.category === 'disease').length})</button>
-        <button>Sensors ({alerts.filter(alert => alert.category === 'sensor').length})</button>
-        <button>Water ({alerts.filter(alert => alert.category === 'water').length})</button>
-      </div>
+              ))}
+            </div>
+            ) : (
+            <div className="p-6 text-center">
+              <Bell className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+              <p className="text-sm text-gray-500">No notifications</p>
+            </div>
+            )}
+          </div>
 
+          <div className="p-4 border-t border-gray-100">
+            <button
+            onClick={handleViewAllNotifications}
+            className="w-full text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
+            >
+            View all notifications
+            </button>
+          </div>
+          </div>
+        </div>
+        )}
+      </div>
+      </div>
+      
+      <ConnectionStatus 
+      status={connectionStatus} 
+      isConnected={isConnected} 
+      onReconnect={reconnect}
+      error={error}
+      />
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <DataCard 
-          title="Temperature" 
-          value="24°C" 
-          change="+2°" 
-          subtext="from yesterday" 
-          trend="up"
-          icon={<Thermometer size={20} />} 
-        />
-        <DataCard 
-          title="Humidity" 
-          value="65%" 
-          change="-5%" 
-          subtext="from yesterday" 
-          trend="down"
-          icon={<Droplets size={20} />} 
-        />
-        <DataCard 
-          title="Soil Moisture" 
-          value="42%" 
-          subtext="Optimal range: 40-60%" 
-          icon={<Waves size={20} />} 
-        />
-        <DataCard 
-          title="Water Usage" 
-          value="128L" 
-          change="-12%" 
-          subtext="from last week" 
-          trend="down"
-          icon={<WaterDroplet size={20} />} 
-        />
+      <DataCard 
+        title="Temperature" 
+        value={sensorData ? `${sensorData.temperature.toFixed(1)}°C` : "24°C"} 
+        change={getTemperatureChange() || "+2°"} 
+        subtext="from last reading" 
+        trend={getTemperatureTrend()}
+        icon={<Thermometer size={20} />}
+        type="temperature"
+      />
+      <DataCard 
+        title="Humidity" 
+        value={sensorData ? `${sensorData.humidity.toFixed(0)}%` : "65%"} 
+        change={getHumidityChange() || "-5%"} 
+        subtext="from last reading" 
+        trend={getHumidityTrend()}
+        icon={<Droplets size={20} />}
+        type="humidity"
+      />
+      <DataCard 
+        title="Fire Detection" 
+        value={sensorData ? (sensorData.isFire ? "🔥 FIRE ALERT" : "✅ Safe") : "Safe"} 
+        subtext={sensorData ? (sensorData.isFire ? "Immediate attention required!" : "No fire detected") : "Monitoring..."} 
+        icon={<Flame size={20} />}
+        type="fire"
+      />
+      <DataCard 
+        title="Rain Status" 
+        value={sensorData ? (sensorData.isRaining ? "🌧 Raining" : "☀ Clear") : "Dry"} 
+        subtext={sensorData ? (sensorData.isRaining ? "Wet conditions detected" : "Clear weather") : "Monitoring..."} 
+        icon={<CloudRain size={20} />}
+        type="rain"
+      />
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <WeatherForecast />
-        <WaterConsumption />
+      <WeatherForecast />
+      <WaterConsumption />
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <SensorStatus />
-        <AlertsPanel />
+      <SensorStatus />
+      <AlertsPanel />
       </div>
     </div>
+  
   );
 };
 
