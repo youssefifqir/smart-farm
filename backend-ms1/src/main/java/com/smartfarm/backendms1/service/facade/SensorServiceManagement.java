@@ -10,7 +10,12 @@ public interface SensorServiceManagement {
     Sensor toggle(Long id);
     void deleteById(Long id);
 
-    // 👇 Nouvelles méthodes
+    // 🔍 Recherches
     List<Sensor> findByType(String type);
     List<Sensor> findByIsActive(boolean isActive);
+    List<Sensor> findByLocation(String location);
+    Sensor findByName(String name);
+
+    // 🔁 Mise à jour du statut par nom
+    int changeStatusByName(String name, Boolean status);
 }

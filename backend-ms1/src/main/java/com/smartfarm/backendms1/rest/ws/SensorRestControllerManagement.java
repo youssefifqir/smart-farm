@@ -6,6 +6,8 @@ import com.smartfarm.backendms1.rest.dto.SensorDtoManagement;
 import com.smartfarm.backendms1.service.facade.SensorServiceManagement;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,20 +16,19 @@ import java.util.stream.Collectors;
 @CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/v1/sensors")
-
 public class SensorRestControllerManagement {
 
     @Autowired
     private SensorServiceManagement sensorService;
 
     @Autowired
-    private SensorConverterManagement SensorServiceManagement;
+    private SensorConverterManagement sensorConverter;  // ✅ minuscule ici
 
     // ➕ Créer un capteur
     @PostMapping("/")
     public SensorDtoManagement create(@RequestBody SensorDtoManagement dto) {
-        Sensor saved = sensorService.save(SensorServiceManagement.toEntity(dto));
-        return SensorServiceManagement.toDto(saved);
+        Sensor saved = sensorService.save(sensorConverter.toEntity(dto));
+        return sensorConverter.toDto(saved);
     }
 
     // 📋 Lister tous les capteurs
@@ -35,7 +36,7 @@ public class SensorRestControllerManagement {
     public List<SensorDtoManagement> findAll() {
         return sensorService.findAll()
                 .stream()
-                .map(SensorServiceManagement::toDto)
+                .map(sensorConverter::toDto)
                 .collect(Collectors.toList());
     }
 
@@ -43,7 +44,7 @@ public class SensorRestControllerManagement {
     @PutMapping("/{id}/toggle")
     public SensorDtoManagement toggle(@PathVariable Long id) {
         Sensor updated = sensorService.toggle(id);
-        return SensorServiceManagement.toDto(updated);
+        return sensorConverter.toDto(updated);
     }
 
     // ❌ Supprimer un capteur
@@ -57,7 +58,7 @@ public class SensorRestControllerManagement {
     public List<SensorDtoManagement> findByType(@PathVariable String type) {
         return sensorService.findByType(type)
                 .stream()
-                .map(SensorServiceManagement::toDto)
+                .map(sensorConverter::toDto)
                 .collect(Collectors.toList());
     }
 
@@ -66,7 +67,7 @@ public class SensorRestControllerManagement {
     public List<SensorDtoManagement> findActive() {
         return sensorService.findByIsActive(true)
                 .stream()
-                .map(SensorServiceManagement::toDto)
+                .map(sensorConverter::toDto)
                 .collect(Collectors.toList());
     }
 
@@ -75,7 +76,29 @@ public class SensorRestControllerManagement {
     public List<SensorDtoManagement> findInactive() {
         return sensorService.findByIsActive(false)
                 .stream()
-                .map(SensorServiceManagement::toDto)
+                .map(sensorConverter::toDto)
                 .collect(Collectors.toList());
     }
+
+    @PutMapping("/status")
+public ResponseEntity<?> updateStatusByName(
+        @RequestParam String name,
+        @RequestParam Boolean status) {
+    int result = sensorService.changeStatusByName(name, status);
+    if (result > 0) {
+        Sensor updatedSensor = sensorService.findByName(name);
+        return ResponseEntity.ok(sensorConverter.toDto(updatedSensor));
+    } else {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("❌ Capteur '" + name + "' introuvable.");
+    }
+}
+@GetMapping("/location/{location}")
+public List<SensorDtoManagement> findByLocation(@PathVariable String location) {
+    return sensorService.findByLocation(location)
+            .stream()
+            .map(sensorConverter::toDto)
+            .collect(Collectors.toList());
+}
+
+
 }

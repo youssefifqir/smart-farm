@@ -3,7 +3,6 @@ package com.smartfarm.backendms1.service.impl;
 import com.smartfarm.backendms1.bean.Sensor;
 import com.smartfarm.backendms1.dao.SensorRepositoryManagement;
 import com.smartfarm.backendms1.service.facade.SensorServiceManagement;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -40,17 +39,30 @@ public class SensorServiceImplManagement implements SensorServiceManagement {
         SensorRepositoryManagement.deleteById(id);
     }
 
-    // 🔍 Capteurs par type
     @Override
     public List<Sensor> findByType(String type) {
         return SensorRepositoryManagement.findByType(type);
     }
 
-    // 🔌 Capteurs actifs/inactifs
     @Override
     public List<Sensor> findByIsActive(boolean isActive) {
         return isActive ?
                 SensorRepositoryManagement.findByIsActiveTrue() :
                 SensorRepositoryManagement.findByIsActiveFalse();
+    }
+
+    @Override
+    public List<Sensor> findByLocation(String location) {
+        return SensorRepositoryManagement.findByLocation(location);
+    }
+
+    @Override
+    public Sensor findByName(String name) {
+        return SensorRepositoryManagement.findByName(name);
+    }
+
+    @Override
+    public int changeStatusByName(String name, Boolean status) {
+        return SensorRepositoryManagement.updateSensorStatusByName(name, status);
     }
 }
