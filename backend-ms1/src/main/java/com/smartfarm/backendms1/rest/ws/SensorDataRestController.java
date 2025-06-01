@@ -1,17 +1,18 @@
 package com.smartfarm.backendms1.rest.ws;
 
-import com.smartfarm.backendms1.dao.SensorRepository;
 import com.smartfarm.backendms1.rest.converter.SensorDataConverter;
 import com.smartfarm.backendms1.rest.dto.SensorDataDto;
 import com.smartfarm.backendms1.service.facade.SensorDataService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-@Controller
+@CrossOrigin(origins = "*")
+@RestController
 @RequestMapping("/api/v1/sensor-data")
 public class SensorDataRestController {
     private final SensorDataService sensorDataService;
@@ -35,7 +36,7 @@ public class SensorDataRestController {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST); // 400 missing required data
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR); // 500 : internal server error
-        }
-    }
+}
+}
 
 }

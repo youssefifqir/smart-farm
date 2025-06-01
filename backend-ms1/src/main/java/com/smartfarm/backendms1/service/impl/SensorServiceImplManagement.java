@@ -12,57 +12,58 @@ import java.util.List;
 public class SensorServiceImplManagement implements SensorServiceManagement {
 
     @Autowired
-    private SensorRepositoryManagement SensorRepositoryManagement;
+    private SensorRepositoryManagement sensorRepositoryManagement;
 
     @Override
     public Sensor save(Sensor sensor) {
         if (sensor.getIsActive() == null) {
-            sensor.setIsActive(false); // par défaut éteint
+            sensor.setIsActive(false); // par défaut : désactivé
         }
-        return SensorRepositoryManagement.save(sensor);
+        return sensorRepositoryManagement.save(sensor);
     }
 
     @Override
     public List<Sensor> findAll() {
-        return SensorRepositoryManagement.findAll();
+        return sensorRepositoryManagement.findAll();
     }
 
     @Override
     public Sensor toggle(Long id) {
-        Sensor sensor = SensorRepositoryManagement.findById(id).orElseThrow();
+        Sensor sensor = sensorRepositoryManagement.findById(id)
+                .orElseThrow(() -> new RuntimeException("Sensor not found with id: " + id));
         sensor.setIsActive(!sensor.getIsActive());
-        return SensorRepositoryManagement.save(sensor);
+        return sensorRepositoryManagement.save(sensor);
     }
 
     @Override
     public void deleteById(Long id) {
-        SensorRepositoryManagement.deleteById(id);
+        sensorRepositoryManagement.deleteById(id);
     }
 
     @Override
     public List<Sensor> findByType(String type) {
-        return SensorRepositoryManagement.findByType(type);
+        return sensorRepositoryManagement.findByType(type);
     }
 
     @Override
     public List<Sensor> findByIsActive(boolean isActive) {
-        return isActive ?
-                SensorRepositoryManagement.findByIsActiveTrue() :
-                SensorRepositoryManagement.findByIsActiveFalse();
+        return isActive
+                ? sensorRepositoryManagement.findByIsActiveTrue()
+                : sensorRepositoryManagement.findByIsActiveFalse();
     }
 
     @Override
     public List<Sensor> findByLocation(String location) {
-        return SensorRepositoryManagement.findByLocation(location);
+        return sensorRepositoryManagement.findByLocation(location);
     }
 
     @Override
     public Sensor findByName(String name) {
-        return SensorRepositoryManagement.findByName(name);
+        return sensorRepositoryManagement.findByName(name);
     }
 
     @Override
     public int changeStatusByName(String name, Boolean status) {
-        return SensorRepositoryManagement.updateSensorStatusByName(name, status);
+        return sensorRepositoryManagement.updateSensorStatusByName(name, status);
     }
 }

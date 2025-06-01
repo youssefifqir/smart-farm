@@ -1,8 +1,8 @@
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/sensor_data
-    username: username
-    password: password
+    username: postgres
+    password: Gmail1965@
   jpa:
     hibernate:
       ddl-auto: update
@@ -16,6 +16,7 @@ spring:
     enabled: false
   autoconfigure:
     exclude: org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+  
 
 server:
   port: 8036

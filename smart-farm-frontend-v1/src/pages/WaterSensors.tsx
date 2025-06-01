@@ -1,18 +1,43 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Waves, Droplet, Activity } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 const WaterSensors = () => {
   const [activeTab, setActiveTab] = useState('water levels');
+  const [waterEnabled, setWaterEnabled] = useState(false);
 
-  const waterLevelData = [
-    { time: '00:00', level: 70 },
-    { time: '04:00', level: 72 },
-    { time: '08:00', level: 75 },
-    { time: '12:00', level: 73 },
-    { time: '16:00', level: 71 },
-    { time: '20:00', level: 70 }
-  ];
+  type Sensor = {
+    name: string;
+    isActive: boolean;
+    // add other properties if needed
+  };
+
+  useEffect(() => {
+    fetch('http://localhost:8036/api/v1/sensors/')
+      .then((res) => res.json())
+      .then((sensors: Sensor[]) => {
+        const sensor = sensors.find((s: Sensor) => s.name === 'water');
+        if (sensor) setWaterEnabled(sensor.isActive);
+      });
+  }, []);
+
+  const toggleSensor = async (enabled: boolean) => {
+    try {
+      const res = await fetch(
+        `http://localhost:8036/api/v1/sensors/status?name=water&status=${enabled}`,
+        { method: 'PUT' }
+      );
+      if (!res.ok) throw new Error();
+    } catch (err) {
+      console.error('Erreur lors de la mise à jour du capteur water', err);
+    }
+  };
+
+  const handleToggle = () => {
+    const newVal = !waterEnabled;
+    setWaterEnabled(newVal);
+    toggleSensor(newVal);
+  };
 
   const renderStatusCard = (title: string, value: string, subtitle: string, icon: React.ReactNode) => (
     <div className="bg-white p-6 rounded-lg border border-gray-100">
@@ -26,6 +51,15 @@ const WaterSensors = () => {
       </div>
     </div>
   );
+
+  const waterLevelData = [
+    { time: '00:00', level: 0},
+    { time: '04:00', level: 72 },
+    { time: '08:00', level: 75 },
+    { time: '12:00', level: 73 },
+    { time: '16:00', level: 71 },
+    { time: '20:00', level: 70 }
+  ];
 
   const renderWaterLevels = () => (
     <div className="bg-white p-6 rounded-lg border border-gray-100">
@@ -52,27 +86,23 @@ const WaterSensors = () => {
 
   const renderSensorStatus = () => (
     <div className="bg-white p-6 rounded-lg border border-gray-100">
-      <h3 className="text-lg font-semibold mb-4">Water Sensor Status</h3>
-      <div className="space-y-4">
-        {[
-          { name: 'Main Reservoir', level: '75%', quality: 'Good', status: 'Active' },
-          { name: 'Irrigation System', flow: '4.2 L/min', pressure: '3.8 bar', status: 'Active' },
-          { name: 'Field Sensors', moisture: '42%', distribution: 'Even', status: 'Active' }
-        ].map((sensor, index) => (
-          <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-            <div>
-              <h4 className="font-medium">{sensor.name}</h4>
-              <p className="text-sm text-gray-500">
-                {sensor.level && `Level: ${sensor.level}`}
-                {sensor.flow && `Flow Rate: ${sensor.flow}`}
-                {sensor.moisture && `Moisture: ${sensor.moisture}`}
-              </p>
-            </div>
-            <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-              {sensor.status}
-            </span>
-          </div>
-        ))}
+      <h3 className="text-lg font-semibold mb-4">Water Sensors</h3>
+      <div className="flex items-center justify-between p-4 border rounded-lg">
+        <div>
+          <h4 className="font-medium">water</h4>
+          <p className="text-sm text-gray-500">Zone D</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className={`px-2 py-1 text-xs font-medium rounded-full ${waterEnabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-600'}`}>
+            {waterEnabled ? 'Active' : 'Inactive'}
+          </span>
+          <button
+            onClick={handleToggle}
+            className={`px-3 py-1 text-xs rounded-md ${waterEnabled ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-800'}`}
+          >
+            {waterEnabled ? 'Désactiver' : 'Activer'}
+          </button>
+        </div>
       </div>
     </div>
   );
