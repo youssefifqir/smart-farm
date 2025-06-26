@@ -94,13 +94,6 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
             icon={<Archive size={20} />} 
             label="Storage Management" 
             isOpen={isOpen} 
-            isDropdown={true} 
-            subItems={[
-            { to: '/storage-management/products', label: 'Product Management' },
-              { to: '/storage-management/categories', label: 'Category Management' },   
-              { to: '/storage-management/clients', label: 'Customer Management' },
-              { to: '/storage-management/suppliers', label: 'Supplier Management' }
-            ]}
           />
           <NavItem to="/weather" icon={<Cloud size={20} />} label="Weather" isOpen={isOpen} />
           <NavItem to="/water-management" icon={<Droplets size={20} />} label="Water Management" isOpen={isOpen} />

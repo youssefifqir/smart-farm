@@ -11,6 +11,7 @@ public class VenteDto {
     private int quantite;
     private BigDecimal prixTotal;
     private LocalDateTime dateVente;
-    private Long produitId;
-    private Long clientId;
+
+    private ProductDto produit;  // 👈 nom clair
+    private ClientDto client;    // 👈 nom clair
 }

@@ -9,7 +9,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/clients")
-@CrossOrigin(origins = "*") // autorise le front-end à accéder
+@CrossOrigin(origins = "http://localhost:5173")
 public class ClientController {
 
     private final ClientService clientService;

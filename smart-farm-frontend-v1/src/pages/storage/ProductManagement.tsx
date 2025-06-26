@@ -18,17 +18,27 @@ const ProductList: React.FC = () => {
     categoryId: 0,
   });
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 9;
+
   const fetchProducts = async () => {
-    const response = await axios.get<Product[]>("http://localhost:8080/api/v1/products");
+    const response = await axios.get<Product[]>(
+      "http://localhost:8080/api/v1/products"
+    );
     setProducts(response.data);
   };
 
   const fetchCategories = async () => {
-    const response = await axios.get<Category[]>("http://localhost:8080/api/v1/categories");
+    const response = await axios.get<Category[]>(
+      "http://localhost:8080/api/v1/categories"
+    );
     setCategories(response.data);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     setNewProduct({ ...newProduct, [e.target.name]: e.target.value });
   };
 
@@ -42,7 +52,10 @@ const ProductList: React.FC = () => {
     };
 
     if (newProduct.id) {
-      await axios.put(`http://localhost:8080/api/v1/products/${newProduct.id}`, payload);
+      await axios.put(
+        `http://localhost:8080/api/v1/products/${newProduct.id}`,
+        payload
+      );
     } else {
       await axios.post("http://localhost:8080/api/v1/products", payload);
     }
@@ -73,10 +86,21 @@ const ProductList: React.FC = () => {
     fetchCategories();
   }, []);
 
-  const filteredProducts = products.filter((p) =>
-    p.nom.toLowerCase().includes(searchTerm.toLowerCase()) &&
-    (selectedCategory === "" || p.category?.id === selectedCategory)
+  // Reset current page when search or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory]);
+
+  const filteredProducts = products.filter(
+    (p) =>
+      p.nom.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      (selectedCategory === "" || p.category?.id === selectedCategory)
   );
+
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentProducts = filteredProducts.slice(indexOfFirstItem, indexOfLastItem);
 
   return (
     <div className="p-6">
@@ -96,7 +120,9 @@ const ProductList: React.FC = () => {
               setSelectedCategory(e.target.value === "" ? "" : Number(e.target.value))
             }
           >
-            <option className="text-xs font-bold text-gray-600">filter</option>
+            <option className="text-xs font-bold text-gray-600" value="">
+              filter
+            </option>
             {categories.map((cat) => (
               <option className="text-xs font-bold" key={cat.id} value={cat.id}>
                 {cat.nom}
@@ -128,7 +154,7 @@ const ProductList: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredProducts.map((prod) => (
+            {currentProducts.map((prod) => (
               <tr key={prod.id} className="border-t text-xs font-bold text-gray-700">
                 <td className="px-4 py-2">{prod.nom}</td>
                 <td className="px-4 py-2">{prod.quantite}</td>
@@ -136,7 +162,7 @@ const ProductList: React.FC = () => {
                 <td className="px-4 py-2">{prod.category?.nom}</td>
                 <td className="px-4 py-2 flex space-x-2">
                   <PencilIcon
-                    className="w-5 h-5 text-blue-500 cursor-pointer hover:text-blue-700"
+                    className="w-5 h-5 text-gray-500 cursor-pointer hover:text-gray-700"
                     onClick={() => editProduct(prod)}
                   />
                   <TrashIcon
@@ -150,6 +176,48 @@ const ProductList: React.FC = () => {
         </table>
       </div>
 
+      {/* Pagination controls */}
+      <div className="flex justify-center items-center gap-2 mt-4">
+        <button
+          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+          disabled={currentPage === 1}
+          className={`px-3 py-1 rounded ${
+            currentPage === 1
+              ? "bg-gray-300 cursor-not-allowed"
+              : "bg-gray-600 text-white"
+          }`}
+        >
+          Prev
+        </button>
+
+        {[...Array(totalPages)].map((_, idx) => {
+          const pageNum = idx + 1;
+          return (
+            <button
+              key={pageNum}
+              onClick={() => setCurrentPage(pageNum)}
+              className={`px-3 py-1 rounded ${
+                pageNum === currentPage ? "bg-green-500 text-white" : "bg-gray-200"
+              }`}
+            >
+              {pageNum}
+            </button>
+          );
+        })}
+
+        <button
+          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+          disabled={currentPage === totalPages}
+          className={`px-3 py-1 rounded ${
+            currentPage === totalPages
+              ? "bg-gray-300 cursor-not-allowed"
+              : "bg-gray-600 text-white"
+          }`}
+        >
+          Next
+        </button>
+      </div>
+
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md">
@@ -158,7 +226,9 @@ const ProductList: React.FC = () => {
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4 text-gray-600">
               <div>
-                <label className="block mb-1 text-xs font-bold text-gray-600">Product Name</label>
+                <label className="block mb-1 text-xs font-bold text-gray-600">
+                  Product Name
+                </label>
                 <input
                   type="text"
                   name="nom"
@@ -169,7 +239,9 @@ const ProductList: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block mb-1 text-xs font-bold text-gray-600">Quantity</label>
+                <label className="block mb-1 text-xs font-bold text-gray-600">
+                  Quantity
+                </label>
                 <input
                   type="number"
                   name="quantite"
@@ -180,7 +252,9 @@ const ProductList: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block mb-1 text-xs font-bold text-gray-600">Price (€)</label>
+                <label className="block mb-1 text-xs font-bold text-gray-600">
+                  Price (€)
+                </label>
                 <input
                   type="number"
                   name="prix"
@@ -192,7 +266,9 @@ const ProductList: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block mb-1 text-xs font-bold text-gray-600">Category</label>
+                <label className="block mb-1 text-xs font-bold text-gray-600">
+                  Category
+                </label>
                 <select
                   name="categoryId"
                   value={newProduct.categoryId}
@@ -200,25 +276,36 @@ const ProductList: React.FC = () => {
                   onChange={handleChange}
                   required
                 >
-                  <option className="text-xs font-bold text-gray-500" value="">-- Choose Category --</option>
+                  <option
+                    className="text-xs font-bold text-gray-500"
+                    value=""
+                  >
+                    Select category
+                  </option>
                   {categories.map((cat) => (
-                    <option className="text-xs font-bold text-gray-600" key={cat.id} value={cat.id}>
+                    <option
+                      className="text-xs font-bold text-gray-600"
+                      key={cat.id}
+                      value={cat.id}
+                    >
                       {cat.nom}
                     </option>
                   ))}
                 </select>
               </div>
-
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
-                  className="px-4 py-2 bg-gray-300 rounded text-xs font-bold text-gray-500"
+                  className="px-4 py-2 rounded border border-gray-400 text-gray-600 text-xs font-bold"
                   onClick={() => setShowModal(false)}
                 >
                   Cancel
                 </button>
-                <button type="submit" className="bg-green-500 text-white p-2 rounded text-xs font-bold ">
-                  {newProduct.id ? "Update" : "Save"}
+                <button
+                  type="submit"
+                  className="bg-green-600 text-white px-4 py-2 rounded text-xs font-bold"
+                >
+                  {newProduct.id ? "Update" : "Create"}
                 </button>
               </div>
             </form>

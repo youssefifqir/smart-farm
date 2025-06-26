@@ -2,6 +2,9 @@ package com.smartfarm.backendms1.rest.converter;
 
 import com.smartfarm.backendms1.rest.dto.ClientDto;
 import com.smartfarm.backendms1.bean.Client;
+import org.springframework.stereotype.Component;
+
+@Component
 
 public class ClientConverter {
 

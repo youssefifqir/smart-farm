@@ -6,11 +6,15 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/ventes")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:5173")
+
 public class VenteRestController {
 
     private final VenteService service;
@@ -43,4 +47,7 @@ public class VenteRestController {
         service.deleteById(id);
         return ResponseEntity.noContent().build();
     }
+    @GetMapping("/total")    public BigDecimal total(){ return service.getTotalVentes(); }
+    @GetMapping("/mensuel")  public Map<String,BigDecimal> mensuel(){ return service.getVentesMensuelles(); }
+
 }

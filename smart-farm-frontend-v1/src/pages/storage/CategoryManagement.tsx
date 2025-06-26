@@ -3,9 +3,13 @@ import axios from "axios";
 import { Category } from "./types";
 import { TrashIcon, PencilIcon } from "@heroicons/react/24/solid";
 
+const ITEMS_PER_PAGE = 9;
+
 const CategoryManagement: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
   const [showModal, setShowModal] = useState(false);
   const [newCategory, setNewCategory] = useState({ nom: "" });
   const [isEditing, setIsEditing] = useState(false);
@@ -16,6 +20,10 @@ const CategoryManagement: React.FC = () => {
     setCategories(response.data);
   };
 
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewCategory({ ...newCategory, [e.target.name]: e.target.value });
   };
@@ -23,12 +31,10 @@ const CategoryManagement: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isEditing && editingCategoryId !== null) {
-      // PUT pour modifier
       await axios.put(`http://localhost:8080/api/v1/categories/${editingCategoryId}`, {
         nom: newCategory.nom,
       });
     } else {
-      // POST pour ajouter
       await axios.post("http://localhost:8080/api/v1/categories", {
         nom: newCategory.nom,
       });
@@ -52,13 +58,13 @@ const CategoryManagement: React.FC = () => {
     setShowModal(true);
   };
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
   const filteredCategories = categories.filter((cat) =>
     cat.nom.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const totalPages = Math.ceil(filteredCategories.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedCategories = filteredCategories.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   return (
     <div className="p-6">
@@ -68,7 +74,10 @@ const CategoryManagement: React.FC = () => {
           placeholder="Search categories..."
           className="border p-2 rounded w-1/3 text-xs font-bold text-gray-600"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1);
+          }}
         />
         <button
           className="bg-green-500 text-white p-2 rounded text-xs font-bold"
@@ -92,12 +101,12 @@ const CategoryManagement: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredCategories.map((cat) => (
+            {paginatedCategories.map((cat) => (
               <tr key={cat.id} className="border-t">
                 <td className="px-4 py-2 text-xs font-bold">{cat.nom}</td>
                 <td className="px-4 py-2 flex space-x-2">
                   <PencilIcon
-                    className="w-5 h-5 text-blue-500 cursor-pointer hover:text-blue-700"
+                    className="w-5 h-5 text-gray-500 cursor-pointer hover:text-gray-700"
                     onClick={() => editCategory(cat)}
                   />
                   <TrashIcon
@@ -111,6 +120,49 @@ const CategoryManagement: React.FC = () => {
         </table>
       </div>
 
+      {/* Pagination */}
+<div className="flex justify-center items-center gap-2 mt-4">
+        <button
+          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+          disabled={currentPage === 1}
+          className={`px-3 py-1 rounded ${
+            currentPage === 1
+              ? "bg-gray-300 cursor-not-allowed"
+              : "bg-gray-600 text-white"
+          }`}
+        >
+          Prev
+        </button>
+
+        {[...Array(totalPages)].map((_, idx) => {
+          const pageNum = idx + 1;
+          return (
+            <button
+              key={pageNum}
+              onClick={() => setCurrentPage(pageNum)}
+              className={`px-3 py-1 rounded ${
+                pageNum === currentPage ? "bg-green-500 text-white" : "bg-gray-200"
+              }`}
+            >
+              {pageNum}
+            </button>
+          );
+        })}
+
+        <button
+          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+          disabled={currentPage === totalPages}
+          className={`px-3 py-1 rounded ${
+            currentPage === totalPages
+              ? "bg-gray-300 cursor-not-allowed"
+              : "bg-gray-600 text-white"
+          }`}
+        >
+          Next
+        </button>
+      </div>
+
+      {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md">

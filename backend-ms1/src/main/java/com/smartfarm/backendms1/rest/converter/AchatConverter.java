@@ -15,6 +15,8 @@ public class AchatConverter {
 
     private final ProductRepository productRepo;
     private final SupplierRepository supplierRepo;
+    private final ProductConverter productConverter;
+    private final SupplierConverter supplierConverter;
 
     public AchatDto toDto(Achat achat) {
         AchatDto dto = new AchatDto();
@@ -22,19 +24,19 @@ public class AchatConverter {
         dto.setQuantite(achat.getQuantite());
         dto.setPrixTotal(achat.getPrixTotal());
         dto.setDateAchat(achat.getDateAchat());
-        dto.setProduitId(achat.getProduit().getId());
-        dto.setFournisseurId(achat.getFournisseur().getId());
+        dto.setProduit(productConverter.toDto(achat.getProduit()));
+        dto.setFournisseur(supplierConverter.toDto(achat.getFournisseur()));
         return dto;
     }
 
     public Achat toEntity(AchatDto dto) {
-        Product product   = productRepo.findById(dto.getProduitId()).orElseThrow();
-        Supplier supplier = supplierRepo.findById(dto.getFournisseurId()).orElseThrow();
+        Product product = productRepo.findById(dto.getProduit().getId()).orElseThrow();
+        Supplier supplier = supplierRepo.findById(dto.getFournisseur().getId()).orElseThrow();
 
         Achat achat = new Achat();
         achat.setId(dto.getId());
         achat.setQuantite(dto.getQuantite());
-        achat.setPrixTotal(dto.getPrixTotal());
+        achat.setPrixTotal(dto.getPrixTotal()); // reste double
         achat.setDateAchat(dto.getDateAchat());
         achat.setProduit(product);
         achat.setFournisseur(supplier);

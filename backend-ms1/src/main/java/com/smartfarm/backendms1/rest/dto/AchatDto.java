@@ -11,6 +11,9 @@ public class AchatDto {
     private int quantite;
     private BigDecimal prixTotal;
     private LocalDateTime dateAchat;
-    private Long produitId;
-    private Long fournisseurId;
+
+    private ProductDto produit;     // 👈 Objet complet
+    private SupplierDto fournisseur; // 👈 Objet complet
+
+
 }

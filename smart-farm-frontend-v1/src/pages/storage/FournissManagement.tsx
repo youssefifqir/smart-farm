@@ -14,6 +14,9 @@ const FournissManagement: React.FC = () => {
   });
   const [searchTerm, setSearchTerm] = useState<string>("");
 
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 9;
+
   const fetchSuppliers = async () => {
     const res = await axios.get("http://localhost:8080/api/v1/suppliers");
     setSuppliers(res.data);
@@ -52,10 +55,14 @@ const FournissManagement: React.FC = () => {
     fetchSuppliers();
   }, []);
 
-  // Filtrer les fournisseurs selon la recherche
   const filteredSuppliers = suppliers.filter((s) =>
     s.nom.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const totalPages = Math.ceil(filteredSuppliers.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentSuppliers = filteredSuppliers.slice(indexOfFirstItem, indexOfLastItem);
 
   return (
     <div className="p-6">
@@ -65,7 +72,10 @@ const FournissManagement: React.FC = () => {
           placeholder="Search Suppliers..."
           className="border p-2 rounded w-1/3 text-xs font-bold text-gray-600"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1);
+          }}
         />
         <button
           className="bg-green-500 text-white p-2 rounded text-xs font-bold"
@@ -82,13 +92,13 @@ const FournissManagement: React.FC = () => {
         <thead className="bg-gray-100">
           <tr>
             <th className="px-4 py-2">Name</th>
-            <th className="px-4 py-2">Adresse</th>
+            <th className="px-4 py-2">Address</th>
             <th className="px-4 py-2">Phone</th>
             <th className="px-4 py-2">Actions</th>
           </tr>
         </thead>
         <tbody>
-          {filteredSuppliers.map((supplier) => (
+          {currentSuppliers.map((supplier) => (
             <tr
               key={supplier.id}
               className="border-t text-xs font-bold text-gray-700"
@@ -98,7 +108,7 @@ const FournissManagement: React.FC = () => {
               <td className="px-4 py-2">{supplier.telephone}</td>
               <td className="px-4 py-2 flex space-x-2">
                 <PencilIcon
-                  className="w-5 h-5 text-blue-500 cursor-pointer hover:text-blue-700"
+                  className="w-5 h-5 text-gray-500 cursor-pointer hover:text-gray-700"
                   onClick={() => editSupplier(supplier)}
                 />
                 <TrashIcon
@@ -111,6 +121,49 @@ const FournissManagement: React.FC = () => {
         </tbody>
       </table>
 
+      {/* PAGINATION */}
+      <div className="flex justify-center items-center gap-2 mt-4">
+        <button
+          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+          disabled={currentPage === 1}
+          className={`px-3 py-1 rounded ${
+            currentPage === 1
+              ? "bg-gray-300 cursor-not-allowed"
+              : "bg-gray-600 text-white"
+          }`}
+        >
+          Prev
+        </button>
+
+        {[...Array(totalPages)].map((_, idx) => {
+          const pageNum = idx + 1;
+          return (
+            <button
+              key={pageNum}
+              onClick={() => setCurrentPage(pageNum)}
+              className={`px-3 py-1 rounded ${
+                pageNum === currentPage ? "bg-green-500 text-white" : "bg-gray-200"
+              }`}
+            >
+              {pageNum}
+            </button>
+          );
+        })}
+
+        <button
+          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+          disabled={currentPage === totalPages}
+          className={`px-3 py-1 rounded ${
+            currentPage === totalPages
+              ? "bg-gray-300 cursor-not-allowed"
+              : "bg-blue-500 text-white"
+          }`}
+        >
+          Next
+        </button>
+      </div>
+
+      {/* MODAL */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md">
@@ -123,7 +176,7 @@ const FournissManagement: React.FC = () => {
                 name="nom"
                 value={newSupplier.nom}
                 placeholder="Supplier Name"
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border rounded block mb-1 text-xs font-bold text-gray-600"
                 onChange={handleChange}
                 required
               />
@@ -132,7 +185,7 @@ const FournissManagement: React.FC = () => {
                 name="adresse"
                 value={newSupplier.adresse}
                 placeholder="Adresse"
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border rounded block mb-1 text-xs font-bold text-gray-600"
                 onChange={handleChange}
                 required
               />
@@ -141,7 +194,7 @@ const FournissManagement: React.FC = () => {
                 name="telephone"
                 value={newSupplier.telephone}
                 placeholder="Telephone"
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border rounded block mb-1 text-xs font-bold text-gray-600"
                 onChange={handleChange}
                 required
               />

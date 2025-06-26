@@ -17,6 +17,9 @@ import ProductManagement from './pages/storage/ProductManagement';
 import CategoryManagement from './pages/storage/CategoryManagement';
 import FournissManagement from './pages/storage/FournissManagement';
 import ClientsManagement from './pages/storage/ClientsManagement';
+import PurchaseManagement from './pages/storage/PurchaseManagement';
+import SaleManagement from './pages/storage/SaleManagement';
+import EmployeManagement from './pages/storage/EmployeManagement';
 function App() {
   return (
     <Router>
@@ -28,6 +31,9 @@ function App() {
             <Route path="categories" element={<CategoryManagement />} />
             <Route path="suppliers" element={<FournissManagement />} />
             <Route path="clients" element={<ClientsManagement />} />
+            <Route path="Purchase" element={<PurchaseManagement />} />
+            <Route path="Sale" element={<SaleManagement/>} />
+            <Route path="Employee" element={<EmployeManagement />} />
           </Route>
 
           <Route path="/weather" element={<Weather />} />

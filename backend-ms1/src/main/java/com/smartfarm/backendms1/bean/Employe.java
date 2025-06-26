@@ -17,6 +17,6 @@ public class Employe {
     private String nom;
     private String prenom;
     private String email;
-    private String poste;          // ex. Technicien, Gestionnaire…
+    private String poste;
     private BigDecimal salaire;
 }

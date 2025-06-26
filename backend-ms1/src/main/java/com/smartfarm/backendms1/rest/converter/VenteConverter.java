@@ -6,6 +6,9 @@ import com.smartfarm.backendms1.bean.Client;
 import com.smartfarm.backendms1.dao.ProductRepository;
 import com.smartfarm.backendms1.dao.ClientRepository;
 import com.smartfarm.backendms1.rest.dto.VenteDto;
+import com.smartfarm.backendms1.rest.converter.ProductConverter;
+import com.smartfarm.backendms1.rest.converter.ClientConverter;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -14,22 +17,25 @@ import org.springframework.stereotype.Component;
 public class VenteConverter {
 
     private final ProductRepository productRepo;
-    private final ClientRepository  clientRepo;
+    private final ClientRepository clientRepo;
+    private final ProductConverter productConverter;
+    private final ClientConverter clientConverter;
 
     public VenteDto toDto(Vente v) {
-        VenteDto d = new VenteDto();
-        d.setId(v.getId());
-        d.setQuantite(v.getQuantite());
-        d.setPrixTotal(v.getPrixTotal());
-        d.setDateVente(v.getDateVente());
-        d.setProduitId(v.getProduit().getId());
-        d.setClientId(v.getClient().getId());
-        return d;
+        VenteDto dto = new VenteDto();
+        dto.setId(v.getId());
+        dto.setQuantite(v.getQuantite());
+        dto.setPrixTotal(v.getPrixTotal());
+        dto.setDateVente(v.getDateVente());
+
+        dto.setProduit(productConverter.toDto(v.getProduit()));
+        dto.setClient(clientConverter.toDto(v.getClient()));
+        return dto;
     }
 
     public Vente toEntity(VenteDto dto) {
-        Product p = productRepo.findById(dto.getProduitId()).orElseThrow();
-        Client  c = clientRepo.findById(dto.getClientId()).orElseThrow();
+        Product p = productRepo.findById(dto.getProduit().getId()).orElseThrow();
+        Client c = clientRepo.findById(dto.getClient().getId()).orElseThrow();
 
         Vente v = new Vente();
         v.setId(dto.getId());
