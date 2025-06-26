@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { PencilIcon, TrashIcon } from "@heroicons/react/24/solid";
+import ConfirmDialog from "./ConfirmDialog";
 
 /* ---------- Types ---------- */
 type Purchase = {
@@ -18,17 +19,17 @@ type Supplier = { id: number; nom: string };
 const ITEMS_PER_PAGE = 9;
 
 const PurchaseManagement: React.FC = () => {
-  /* ---------- States ---------- */
   const [purchases, setPurchases] = useState<Purchase[]>([]);
-  const [products,  setProducts]  = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [showModal, setShowModal] = useState(false);
-
-  const [searchTerm, setSearchTerm]       = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedSupplier, setSelectedSupplier] = useState<number | "">("");
-  const [currentPage, setCurrentPage]     = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
 
-  /* ---------- Form state ---------- */
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+
   const [form, setForm] = useState({
     id: 0,
     quantite: 0,
@@ -38,7 +39,6 @@ const PurchaseManagement: React.FC = () => {
     fournisseurId: 0,
   });
 
-  /* ---------- Initial fetch ---------- */
   useEffect(() => {
     (async () => {
       const [pchs, prods, sups] = await Promise.all([
@@ -52,7 +52,6 @@ const PurchaseManagement: React.FC = () => {
     })();
   }, []);
 
-  /* ---------- Form helpers ---------- */
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => setForm({ ...form, [e.target.name]: e.target.value });
@@ -70,10 +69,10 @@ const PurchaseManagement: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = {
-      quantite   : Number(form.quantite),
-      prixTotal  : Number(form.prixTotal),
-      dateAchat  : form.dateAchat,
-      produit    : { id: Number(form.produitId) },
+      quantite: Number(form.quantite),
+      prixTotal: Number(form.prixTotal),
+      dateAchat: form.dateAchat,
+      produit: { id: Number(form.produitId) },
       fournisseur: { id: Number(form.fournisseurId) },
     };
 
@@ -100,12 +99,25 @@ const PurchaseManagement: React.FC = () => {
     setShowModal(true);
   };
 
-  const deletePurchase = async (id: number) => {
-    await axios.delete(`http://localhost:8080/api/achats/id/${id}`);
-    setPurchases(prev => prev.filter(p => p.id !== id));
+  const confirmDeletePurchase = (id: number) => {
+    setDeleteId(id);
+    setConfirmOpen(true);
   };
 
-  /* ---------- Filtering + pagination ---------- */
+  const handleDeleteConfirmed = async () => {
+    if (deleteId !== null) {
+      await axios.delete(`http://localhost:8080/api/achats/id/${deleteId}`);
+      setPurchases(prev => prev.filter(p => p.id !== deleteId));
+    }
+    setConfirmOpen(false);
+    setDeleteId(null);
+  };
+
+  const handleDeleteCancelled = () => {
+    setConfirmOpen(false);
+    setDeleteId(null);
+  };
+
   const filtered = purchases.filter(
     p =>
       (p.produit?.name?.toLowerCase() ?? "").includes(searchTerm.toLowerCase()) &&
@@ -115,13 +127,11 @@ const PurchaseManagement: React.FC = () => {
   useEffect(() => setCurrentPage(1), [searchTerm, selectedSupplier]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const startIdx    = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginated   = filtered.slice(startIdx, startIdx + ITEMS_PER_PAGE);
-
+  const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginated = filtered.slice(startIdx, startIdx + ITEMS_PER_PAGE);
 
   return (
     <div className="p-6">
-      {/* Barre de recherche + filtre + bouton add */}
       <div className="flex justify-between items-center mb-4">
         <div className="flex gap-4 items-center w-2/3">
           <input
@@ -152,7 +162,6 @@ const PurchaseManagement: React.FC = () => {
         </button>
       </div>
 
-      {/* Tableau des achats */}
       <div className="overflow-x-auto shadow rounded-lg">
         <table className="min-w-full text-sm text-left text-gray-700 bg-white">
           <thead className="bg-gray-100">
@@ -180,7 +189,7 @@ const PurchaseManagement: React.FC = () => {
                   />
                   <TrashIcon
                     className="w-5 h-5 text-red-500 cursor-pointer hover:text-red-700"
-                    onClick={() => deletePurchase(p.id)}
+                    onClick={() => confirmDeletePurchase(p.id)}
                   />
                 </td>
               </tr>
@@ -189,7 +198,6 @@ const PurchaseManagement: React.FC = () => {
         </table>
       </div>
 
-      {/* Pagination */}
       <div className="flex justify-center items-center gap-2 mt-4">
         <button
           onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
@@ -227,108 +235,104 @@ const PurchaseManagement: React.FC = () => {
         </button>
       </div>
 
-      {/* Modal d'ajout / édition */}
-     {showModal && (
-  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-    <div className="bg-white rounded-xl p-6 w-full max-w-md">
-      <h2 className="text-gray-600 text-lg font-bold mb-4">
-        {form.id ? "Edit Purchase" : "Add Purchase"}
-      </h2>
-      <form onSubmit={handleSubmit} className="space-y-3 text-gray-600">
-        {/* Product */}
-        <div>
-          <label className="block mb-1 text-xs font-bold">Product</label>
-          <select
-            name="produitId"
-            value={form.produitId}
-            onChange={handleChange}
-            className="w-full p-2 border rounded text-xs font-bold"
-            required
-          >
-            <option value="">-- choose product --</option>
-            {products.map(p => (
-              <option key={p.id} value={p.id}>{p.nom}</option>
-            ))}
-          </select>
-        </div>
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        title="Supprimer l'achat"
+        message="Voulez-vous vraiment supprimer cet achat ? Cette action est irréversible."
+        onConfirm={handleDeleteConfirmed}
+        onCancel={handleDeleteCancelled}
+      />
 
-        {/* Supplier */}
-        <div>
-          <label className="block mb-1 text-xs font-bold">Supplier</label>
-          <select
-            name="fournisseurId"
-            value={form.fournisseurId}
-            onChange={handleChange}
-            className="w-full p-2 border rounded text-xs font-bold"
-            required
-          >
-            <option value="">-- choose supplier --</option>
-            {suppliers.map(s => (
-              <option key={s.id} value={s.id}>{s.nom}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Quantity + Total Price side by side */}
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <label className="block mb-1 text-xs font-bold">Quantity</label>
-            <input
-              name="quantite"
-              type="number"
-              placeholder="Qty"
-              className="w-full p-2 border rounded text-xs font-bold"
-              value={form.quantite}
-              onChange={handleChange}
-              required
-            />
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <h2 className="text-gray-600 text-lg font-bold mb-4">
+              {form.id ? "Edit Purchase" : "Add Purchase"}
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-3 text-gray-600">
+              <div>
+                <label className="block mb-1 text-xs font-bold">Product</label>
+                <select
+                  name="produitId"
+                  value={form.produitId}
+                  onChange={handleChange}
+                  className="w-full p-2 border rounded text-xs font-bold"
+                  required
+                >
+                  <option value="">-- choose product --</option>
+                  {products.map(p => (
+                    <option key={p.id} value={p.id}>{p.nom}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block mb-1 text-xs font-bold">Supplier</label>
+                <select
+                  name="fournisseurId"
+                  value={form.fournisseurId}
+                  onChange={handleChange}
+                  className="w-full p-2 border rounded text-xs font-bold"
+                  required
+                >
+                  <option value="">-- choose supplier --</option>
+                  {suppliers.map(s => (
+                    <option key={s.id} value={s.id}>{s.nom}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="block mb-1 text-xs font-bold">Quantity</label>
+                  <input
+                    name="quantite"
+                    type="number"
+                    placeholder="Qty"
+                    className="w-full p-2 border rounded text-xs font-bold"
+                    value={form.quantite}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block mb-1 text-xs font-bold">Total Price (MAD)</label>
+                  <input
+                    name="prixTotal"
+                    type="number"
+                    placeholder="Total Price"
+                    className="w-full p-2 border rounded text-xs font-bold"
+                    value={form.prixTotal}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block mb-1 text-xs font-bold">Purchase Date</label>
+                <input
+                  type="datetime-local"
+                  name="dateAchat"
+                  value={form.dateAchat}
+                  onChange={handleChange}
+                  className="w-full p-2 border rounded text-xs font-bold"
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <button
+                  type="button"
+                  className="bg-gray-300 text-gray-700 px-4 py-2 rounded"
+                  onClick={() => setShowModal(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded">
+                  {form.id ? "Update" : "Save"}
+                </button>
+              </div>
+            </form>
           </div>
-
-          <div className="flex-1">
-            <label className="block mb-1 text-xs font-bold">Total Price (MAD)</label>
-            <input
-              name="prixTotal"
-              type="number"
-              placeholder="Total Price"
-              className="w-full p-2 border rounded text-xs font-bold"
-              value={form.prixTotal}
-              onChange={handleChange}
-              required
-            />
-          </div>
         </div>
-
-        {/* Date */}
-        <div>
-          <label className="block mb-1 text-xs font-bold">Purchase Date</label>
-          <input
-            type="datetime-local"
-            name="dateAchat"
-            value={form.dateAchat}
-            onChange={handleChange}
-            className="w-full p-2 border rounded text-xs font-bold"
-            required
-          />
-        </div>
-
-        {/* Buttons */}
-        <div className="flex justify-end gap-2 mt-4">
-          <button
-            type="button"
-            className="bg-gray-300 text-gray-700 px-4 py-2 rounded"
-            onClick={() => setShowModal(false)}
-          >
-            Cancel
-          </button>
-          <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded">
-            {form.id ? "Update" : "Save"}
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-)}
-
+      )}
     </div>
   );
 };

@@ -5,28 +5,31 @@ import { TrashIcon, PencilIcon } from "@heroicons/react/24/solid";
 /* ---------- types ---------- */
 import { Product } from "./types";
 import { Client } from "./types";
+
+import ConfirmDialog from "./ConfirmDialog"; // <-- Import de la boîte de confirmation
+
 type Vente = {
   id: number;
   quantite: number;
   prixTotal: number;
   dateVente: string;
-  produit?:{ id: number; name: string };
+  produit?: { id: number; name: string };
   client?: Client;
 };
 
-/* ---------- pagination ---------- */
 const ITEMS_PER_PAGE = 9;
 
 const SaleManagement: React.FC = () => {
-  /* ---------- state ---------- */
-  const [sales,    setSales]    = useState<Vente[]>([]);
+  const [sales, setSales] = useState<Vente[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [clients,  setClients]  = useState<Client[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [showModal, setShowModal] = useState(false);
 
-  const [searchTerm, setSearchTerm]       = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedClient, setSelectedClient] = useState<number | "">("");
-  const [currentPage, setCurrentPage]     = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     id: 0,
@@ -37,7 +40,10 @@ const SaleManagement: React.FC = () => {
     clientId: 0,
   });
 
-  /* ---------- fetch data ---------- */
+  // États pour confirmation suppression
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+
   useEffect(() => {
     (async () => {
       const [vts, prods, cls] = await Promise.all([
@@ -51,30 +57,40 @@ const SaleManagement: React.FC = () => {
     })();
   }, []);
 
-  /* ---------- helpers ---------- */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm({ ...form, [e.target.name]: e.target.value });
 
   const resetForm = () =>
-    setForm({ id:0, quantite:0, prixTotal:0, dateVente:"", produitId:0, clientId:0 });
+    setForm({ id: 0, quantite: 0, prixTotal: 0, dateVente: "", produitId: 0, clientId: 0 });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
     const payload = {
-      quantite : Number(form.quantite),
+      quantite: Number(form.quantite),
       prixTotal: Number(form.prixTotal),
       dateVente: form.dateVente,
-      produit  : { id: Number(form.produitId) },
-      client   : { id: Number(form.clientId) },
+      produit: { id: Number(form.produitId) },
+      client: { id: Number(form.clientId) },
     };
-    form.id
-      ? await axios.put(`http://localhost:8080/api/ventes/${form.id}`, payload)
-      : await axios.post("http://localhost:8080/api/ventes", payload);
 
-    setShowModal(false);
-    resetForm();
-    const { data } = await axios.get<Vente[]>("http://localhost:8080/api/ventes");
-    setSales(data);
+    try {
+      if (form.id) {
+        await axios.put(`http://localhost:8080/api/ventes/${form.id}`, payload);
+      } else {
+        await axios.post("http://localhost:8080/api/ventes", payload);
+      }
+      setShowModal(false);
+      resetForm();
+      const { data } = await axios.get<Vente[]>("http://localhost:8080/api/ventes");
+      setSales(data);
+    } catch (error: any) {
+      if (axios.isAxiosError(error) && error.response) {
+        setErrorMessage(error.response.data.message || "Erreur lors de l'enregistrement. Quantité insuffisante pour le produit");
+      } else {
+        setErrorMessage("Erreur réseau ou inattendue.");
+      }
+    }
   };
 
   const editSale = (v: Vente) => {
@@ -82,36 +98,53 @@ const SaleManagement: React.FC = () => {
       id: v.id,
       quantite: v.quantite,
       prixTotal: v.prixTotal,
-      dateVente: v.dateVente.slice(0,16),
+      dateVente: v.dateVente.slice(0, 16),
       produitId: v.produit?.id ?? 0,
-      clientId : v.client?.id  ?? 0,
+      clientId: v.client?.id ?? 0,
     });
     setShowModal(true);
   };
 
-  const deleteSale = async (id:number) => {
-    await axios.delete(`http://localhost:8080/api/ventes/${id}`);
-    setSales(prev => prev.filter(s => s.id !== id));
+  // Nouvelle fonction pour ouvrir la confirmation
+  const confirmDeleteSale = (id: number) => {
+    setDeleteId(id);
+    setConfirmOpen(true);
   };
 
-  /* ---------- filtering + pagination ---------- */
+  // Suppression confirmée
+  const handleDeleteConfirmed = async () => {
+    if (deleteId !== null) {
+      try {
+        await axios.delete(`http://localhost:8080/api/ventes/${deleteId}`);
+        setSales(prev => prev.filter(s => s.id !== deleteId));
+      } catch (error) {
+        // Optionnel: gérer erreur ici
+      }
+    }
+    setConfirmOpen(false);
+    setDeleteId(null);
+  };
+
+  // Annuler suppression
+  const handleDeleteCancelled = () => {
+    setConfirmOpen(false);
+    setDeleteId(null);
+  };
+
   const filtered = sales.filter(
     v =>
       (v.produit?.name?.toLowerCase() ?? "").includes(searchTerm.toLowerCase()) &&
       (selectedClient === "" || v.client?.id === selectedClient)
   );
 
-  // si recherche / filtre change -> revenir page 1
   useEffect(() => setCurrentPage(1), [searchTerm, selectedClient]);
 
-  const totalPages     = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const startIdx       = (currentPage - 1) * ITEMS_PER_PAGE;
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
   const paginatedSales = filtered.slice(startIdx, startIdx + ITEMS_PER_PAGE);
 
-  /* ---------- UI ---------- */
   return (
     <div className="p-6">
-      {/* barre recherche + filtre + add */}
       <div className="flex justify-between items-center mb-4">
         <div className="flex gap-4 items-center w-2/3">
           <input
@@ -129,19 +162,23 @@ const SaleManagement: React.FC = () => {
           >
             <option value="">Filter Client</option>
             {clients.map(c => (
-              <option key={c.id} value={c.id}>{c.nom}</option>
+              <option key={c.id} value={c.id}>
+                {c.nom}
+              </option>
             ))}
           </select>
         </div>
         <button
           className="bg-green-500 text-white p-2 rounded text-xs font-bold"
-          onClick={() => { resetForm(); setShowModal(true); }}
+          onClick={() => {
+            resetForm();
+            setShowModal(true);
+          }}
         >
           + Add Sale
         </button>
       </div>
 
-      {/* table */}
       <div className="overflow-x-auto shadow rounded-lg">
         <table className="min-w-full text-sm text-left text-gray-700 bg-white">
           <thead className="bg-gray-100">
@@ -157,11 +194,11 @@ const SaleManagement: React.FC = () => {
           <tbody>
             {paginatedSales.map(v => (
               <tr key={v.id} className="border-t text-xs font-bold text-gray-700">
-                <td className="px-4 py-2">{v.produit?.name }</td>
+                <td className="px-4 py-2">{v.produit?.name}</td>
                 <td className="px-4 py-2">{v.client?.nom ?? "N/A"}</td>
                 <td className="px-4 py-2">{v.quantite}</td>
                 <td className="px-4 py-2">{v.prixTotal}</td>
-                <td className="px-4 py-2">{v.dateVente.slice(0,10)}</td>
+                <td className="px-4 py-2">{v.dateVente.slice(0, 10)}</td>
                 <td className="px-4 py-2 flex gap-2">
                   <PencilIcon
                     className="w-5 h-5 text-gray-500 cursor-pointer hover:text-gray-700"
@@ -169,7 +206,7 @@ const SaleManagement: React.FC = () => {
                   />
                   <TrashIcon
                     className="w-5 h-5 text-red-500 cursor-pointer hover:text-red-700"
-                    onClick={() => deleteSale(v.id)}
+                    onClick={() => confirmDeleteSale(v.id)}
                   />
                 </td>
               </tr>
@@ -178,7 +215,7 @@ const SaleManagement: React.FC = () => {
         </table>
       </div>
 
-      {/* pagination */}
+      {/* Pagination */}
       <div className="flex justify-center items-center gap-2 mt-4">
         <button
           onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
@@ -209,38 +246,48 @@ const SaleManagement: React.FC = () => {
           onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
           disabled={currentPage === totalPages}
           className={`px-3 py-1 rounded ${
-            currentPage === totalPages ? "bg-gray-300 cursor-not-allowed" : "bg-blue-500 text-white"
+            currentPage === totalPages
+              ? "bg-gray-300 cursor-not-allowed"
+              : "bg-blue-500 text-white"
           }`}
         >
           Next
         </button>
       </div>
 
-      {/* modal */}
+      {/* Modal d'ajout / édition */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md">
             <h2 className="text-gray-600 text-lg font-bold mb-4">
               {form.id ? "Edit Sale" : "Add Sale"}
             </h2>
+
+            {/* ALERTE D'ERREUR */}
+            {errorMessage && (
+              <div className="bg-red-100 text-red-700 border border-red-300 px-4 py-2 rounded mb-3 text-xs font-bold">
+                {errorMessage}
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-3 text-gray-600">
-              {/* product */}
-    <div>
-          <label className="block mb-1 text-xs font-bold">Product</label>
-          <select
-            name="produitId"
-            value={form.produitId}
-            onChange={handleChange}
-            className="w-full p-2 border rounded text-xs font-bold"
-            required
-          >
-            <option value="">-- choose product --</option>
-            {products.map(p => (
-              <option key={p.id} value={p.id}>{p.nom}</option>
-            ))}
-          </select>
-        </div>
-              {/* client */}
+              <div>
+                <label className="block mb-1 text-xs font-bold">Product</label>
+                <select
+                  name="produitId"
+                  value={form.produitId}
+                  onChange={handleChange}
+                  className="w-full p-2 border rounded text-xs font-bold"
+                  required
+                >
+                  <option value="">-- choose product --</option>
+                  {products.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.nom}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="block mb-1 text-xs font-bold">Client</label>
                 <select
@@ -252,34 +299,38 @@ const SaleManagement: React.FC = () => {
                 >
                   <option value="">-- choose client --</option>
                   {clients.map(c => (
-                    <option key={c.id} value={c.id}>{c.nom}</option>
+                    <option key={c.id} value={c.id}>
+                      {c.nom}
+                    </option>
                   ))}
                 </select>
               </div>
-              {/* qty + total */}
               <div className="flex gap-2">
+                <div className="w-1/2">
                   <label className="block mb-1 text-xs font-bold">Quantity</label>
-                <input
-                  name="quantite"
-                  type="number"
-                  placeholder="Qty"
-                  className="w-1/2 p-2 border rounded text-xs font-bold"
-                  value={form.quantite}
-                  onChange={handleChange}
-                  required
-                />
-                  <label className="block mb-1 text-xs font-bold">TotalPrice</label>
-                <input
-                  name="prixTotal"
-                  type="number"
-                  placeholder="Total"
-                  className="w-1/2 p-2 border rounded text-xs font-bold"
-                  value={form.prixTotal}
-                  onChange={handleChange}
-                  required
-                />
+                  <input
+                    name="quantite"
+                    type="number"
+                    placeholder="Qty"
+                    className="w-full p-2 border rounded text-xs font-bold"
+                    value={form.quantite}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                <div className="w-1/2">
+                  <label className="block mb-1 text-xs font-bold">Total Price</label>
+                  <input
+                    name="prixTotal"
+                    type="number"
+                    placeholder="Total"
+                    className="w-full p-2 border rounded text-xs font-bold"
+                    value={form.prixTotal}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
               </div>
-              {/* date */}
               <div>
                 <label className="block mb-1 text-xs font-bold">Date</label>
                 <input
@@ -291,7 +342,6 @@ const SaleManagement: React.FC = () => {
                   required
                 />
               </div>
-              {/* buttons */}
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
@@ -311,6 +361,15 @@ const SaleManagement: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Boîte de confirmation de suppression */}
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        title="Confirmer la suppression"
+        message="Voulez-vous vraiment supprimer cette vente ? Cette action est irréversible."
+        onConfirm={handleDeleteConfirmed}
+        onCancel={handleDeleteCancelled}
+      />
     </div>
   );
 };
