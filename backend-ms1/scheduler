@@ -1,0 +1,19 @@
+package com.smartfarm.backendms1.scheduler;
+
+import com.smartfarm.backendms1.service.facade.IrrigationService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+@Component
+@RequiredArgsConstructor
+public class IrrigationScheduler {
+
+    private final IrrigationService irrigationService;
+
+    // Déclenche l’arrosage chaque jour à 10h du matin
+    @Scheduled(cron = "0 0 10 * * *", zone = "Europe/Casablanca")
+    public void dailyIrrigation() {
+        irrigationService.startWatering();  // Logique d'arrosage
+    }
+}

@@ -1,10 +1,13 @@
+// ✅ WaterManagement.tsx avec formulaire modal de programmation
 import { useState } from 'react';
-import { Droplet, Timer, Gauge, TrendingDown, Calendar, History } from 'lucide-react';
+import { Droplet, Timer, Gauge, TrendingDown, Calendar } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, AreaChart, Area, XAxis, YAxis } from 'recharts';
 import DataCard from '../components/dashboard/DataCard';
 
 const WaterManagement = () => {
   const [activeTab, setActiveTab] = useState('usage history');
+  const [showModal, setShowModal] = useState(false); // ✅ Nouveau : état pour afficher le modal
+  const [form, setForm] = useState({ zone: '', time: '', duration: '' }); // ✅ Nouveau : état du formulaire
 
   const zoneData = [
     { name: 'Zone A - Vegetables', value: 45, color: '#22c55e' },
@@ -29,6 +32,36 @@ const WaterManagement = () => {
     { time: '08:30', zone: 'Zone C', duration: '20 min' },
     { time: '09:00', zone: 'Zone D', duration: '15 min' }
   ];
+
+  // ✅ Nouveau : gestion du formulaire avec typage React
+const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  setForm({ ...form, [e.target.name]: e.target.value });
+};
+
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  try {
+    const response = await fetch('http://localhost:8036/api/v1/irrigation/schedule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        zone: form.zone,
+        time: form.time,
+        duration: parseInt(form.duration)
+      })
+    });
+    if (response.ok) {
+      alert('✅ Arrosage programmé avec succès !');
+      setShowModal(false);
+      setForm({ zone: '', time: '', duration: '' });
+    } else {
+      alert('❌ Échec de la programmation');
+    }
+  } catch (error) {
+    alert('⛔ Erreur de connexion au serveur');
+    console.error(error);
+  }
+};
 
   const renderUsageHistory = () => (
     <div className="space-y-6">
@@ -89,6 +122,14 @@ const WaterManagement = () => {
   const renderSchedule = () => (
     <div className="bg-white p-6 rounded-lg border border-gray-100">
       <h2 className="text-lg font-semibold mb-4">Irrigation Schedule</h2>
+
+      <button
+        onClick={() => setShowModal(true)}
+        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded mb-4"
+      >
+        ➕ Programmer un arrosage
+      </button>
+
       <div className="space-y-4">
         {scheduleData.map((item, index) => (
           <div key={index} className="flex items-center justify-between p-4 rounded-lg border border-gray-100">
@@ -99,9 +140,12 @@ const WaterManagement = () => {
                 <p className="text-sm text-gray-500">{item.time}</p>
               </div>
             </div>
-            <div className="flex items-center">
-              <Timer className="text-gray-400 mr-2" size={16} />
-              <span className="text-sm font-medium text-gray-600">{item.duration}</span>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center">
+                <Timer className="text-gray-400 mr-2" size={16} />
+                <span className="text-sm font-medium text-gray-600">{item.duration}</span>
+              </div>
+              <p className="text-sm font-semibold text-green-600">✅ Actif</p>
             </div>
           </div>
         ))}
@@ -130,33 +174,10 @@ const WaterManagement = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <DataCard
-          title="Total Usage Today"
-          value="128L"
-          change="-12%"
-          subtext="from yesterday"
-          trend="down"
-          icon={<Droplet size={20} />}
-        />
-        <DataCard
-          title="Water Pressure"
-          value="4.2 bar"
-          subtext="Optimal range: 3.5-4.5 bar"
-          icon={<Gauge size={20} />}
-        />
-        <DataCard
-          title="Next Irrigation"
-          value="2h 15m"
-          subtext="Zone A scheduled next"
-          icon={<Timer size={20} />}
-        />
-        <DataCard
-          title="Water Savings"
-          value="15%"
-          subtext="Compared to last month"
-          trend="down"
-          icon={<TrendingDown size={20} />}
-        />
+        <DataCard title="Total Usage Today" value="128L" change="-12%" subtext="from yesterday" trend="down" icon={<Droplet size={20} />} />
+        <DataCard title="Water Pressure" value="4.2 bar" subtext="Optimal range: 3.5-4.5 bar" icon={<Gauge size={20} />} />
+        <DataCard title="Next Irrigation" value="2h 15m" subtext="Zone A scheduled next" icon={<Timer size={20} />} />
+        <DataCard title="Water Savings" value="15%" subtext="Compared to last month" trend="down" icon={<TrendingDown size={20} />} />
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-100">
@@ -178,10 +199,73 @@ const WaterManagement = () => {
           </nav>
         </div>
 
-        <div className="p-6">
-          {renderContent()}
-        </div>
+        <div className="p-6">{renderContent()}</div>
       </div>
+
+      {/* ✅ Modal de programmation d'arrosage */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <h2 className="text-gray-600 text-lg font-bold mb-4">Programmer un arrosage</h2>
+            <form onSubmit={handleSubmit} className="space-y-3 text-gray-600">
+              <div>
+                <label className="block mb-1 text-xs font-bold">Zone</label>
+                <select
+                  name="zone"
+                  value={form.zone}
+                  onChange={handleChange}
+                  className="w-full p-2 border rounded text-xs font-bold"
+                  required
+                >
+                  <option value="">-- Choisir une zone --</option>
+                  <option value="Zone A">Zone A</option>
+                  <option value="Zone B">Zone B</option>
+                  <option value="Zone C">Zone C</option>
+                  <option value="Zone D">Zone D</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block mb-1 text-xs font-bold">Heure</label>
+                <input
+                  type="time"
+                  name="time"
+                  value={form.time}
+                  onChange={handleChange}
+                  className="w-full p-2 border rounded text-xs font-bold"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1 text-xs font-bold">Durée (en minutes)</label>
+                <input
+                  name="duration"
+                  type="number"
+                  placeholder="Durée"
+                  className="w-full p-2 border rounded text-xs font-bold"
+                  value={form.duration}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 mt-4">
+                <button
+                  type="button"
+                  className="bg-gray-300 text-gray-700 px-4 py-2 rounded"
+                  onClick={() => setShowModal(false)}
+                >
+                  Annuler
+                </button>
+                <button type="submit" className="bg-green-500 text-white px-4 py-2 rounded">
+                  Valider
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
