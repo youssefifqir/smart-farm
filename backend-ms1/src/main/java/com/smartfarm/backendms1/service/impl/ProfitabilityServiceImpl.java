@@ -1,14 +1,16 @@
 package com.smartfarm.backendms1.service.impl;
 
 import com.smartfarm.backendms1.bean.*;
-import com.smartfarm.backendms1.dao.ProfitabilityReportRepository;
+import com.smartfarm.backendms1.dao.*;
 
 import com.smartfarm.backendms1.service.facade.ProfitabilityService;
 import com.smartfarm.backendms1.service.facade.ResourceConsumptionService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.YearMonth;
 import java.util.ArrayList;
@@ -27,13 +29,27 @@ public class ProfitabilityServiceImpl implements ProfitabilityService {
     @Autowired
     private ResourceConsumptionService resourceConsumptionService;
 
+    @Autowired
+    private AchatRepository achatRepository;
+
+    @Autowired
+    private VenteRepository venteRepository;
+
+    @Autowired
+    private EmployeRepository employeRepository;
+
+    @Autowired
+    private ProductRepository productRepository;
+
     // Constantes pour les calculs financiers (à ajuster selon vos besoins)
     private static final double WATER_PRICE_PER_LITER = 0.002; // Prix de l'eau par litre
     private static final double ELECTRICITY_PRICE_PER_KWH = 0.15; // Prix de l'électricité par kWh
     private static final double MONTHLY_MAINTENANCE_COST = 50.0; // Coût mensuel d'entretien des capteurs
+    @Autowired
+    private SensorRepository sensorRepository;
 
     /**
-     * Générer un rapport de rentabilité quotidien basé sur les données de consommation
+     * Générer un rapport de rentabilité quotidien basé sur les vraies données
      */
     @Override
     public ProfitabilityReport generateDailyReport(LocalDate date) {
@@ -41,26 +57,26 @@ public class ProfitabilityServiceImpl implements ProfitabilityService {
         double waterUsage = resourceConsumptionService.getWaterConsumption(date); // en litres
         double energyUsage = resourceConsumptionService.getEnergyConsumption(date); // en kWh
 
-        // Calculer les coûts
+        // Calculer les coûts fixes
         double waterCost = waterUsage * WATER_PRICE_PER_LITER;
         double energyCost = energyUsage * ELECTRICITY_PRICE_PER_KWH;
         double dailyMaintenanceCost = MONTHLY_MAINTENANCE_COST / 30.0;
 
-        // Valeurs par défaut pour les nouveaux champs
-        double laborCost = 150.0; // Coût journalier de main-d'œuvre
-        double fertilizerCost = 75.0; // Coût journalier d'engrais
-        double otherCosts = 50.0; // Autres coûts journaliers
+        // Calculer les coûts réels à partir des données
+        double laborCost = calculateDailyLaborCost(date);
+        double purchaseCost = calculateDailyPurchaseCost(date);
+        double otherCosts = dailyMaintenanceCost; // Coûts d'entretien
 
-        double totalCost = waterCost + energyCost + dailyMaintenanceCost + laborCost + fertilizerCost + otherCosts;
+        double totalCost = waterCost + energyCost + laborCost + purchaseCost + otherCosts;
 
-        // Estimer les revenus
-        double estimatedRevenue = estimateRevenue(date);
+        // Calculer les revenus réels
+        double actualRevenue = calculateDailyRevenue(date);
 
         // Calculer le profit
-        double profit = estimatedRevenue - totalCost;
+        double profit = actualRevenue - totalCost;
 
         // Calculer la marge bénéficiaire
-        double profitMargin = (profit / estimatedRevenue) * 100;
+        double profitMargin = actualRevenue > 0 ? (profit / actualRevenue) * 100 : 0;
 
         // Créer et sauvegarder le rapport
         ProfitabilityReport report = new ProfitabilityReport();
@@ -69,84 +85,84 @@ public class ProfitabilityServiceImpl implements ProfitabilityService {
         report.setEnergyCost(energyCost);
         report.setSensorMaintenanceCost(dailyMaintenanceCost);
         report.setLaborCost(laborCost);
-        report.setFertilizerCost(fertilizerCost);
+        report.setFertilizerCost(purchaseCost); // Utiliser purchaseCost pour les achats
         report.setOtherCosts(otherCosts);
         report.setTotalCost(totalCost);
-        report.setEstimatedRevenue(estimatedRevenue);
+        report.setEstimatedRevenue(actualRevenue);
         report.setProfit(profit);
         report.setProfitMargin(profitMargin);
         report.setTimeframe("daily");
 
         // Par défaut, attribuer à une zone et un type de culture
-        // (dans un système réel, cela serait déterminé dynamiquement)
-        report.setZone(Zone.NORTH);
-        report.setCropType(CropType.TOMATOES);
-        report.setYieldAmount(100.0); // Production en kg
+        report.setZone(Zone.Zone_A);
+        //report.setCropType(CropType.TOMATOES);
+        report.setYieldAmount(calculateDailyYield(date)); // Production réelle
 
         return profitabilityReportRepository.save(report);
     }
 
     /**
-     * Estimer les revenus basés sur les conditions environnementales et les rendements attendus
+     * Calculer le coût journalier de main-d'œuvre
      */
-    private double estimateRevenue(LocalDate date) {
-        // Obtenez les conditions environnementales moyennes du jour
-        double avgHumidity = resourceConsumptionService.getAverageHumidity(date);
-        double avgTemperature = resourceConsumptionService.getAverageTemperature(date);
-        boolean hasRained = resourceConsumptionService.hasRained(date);
-        boolean hasFire = resourceConsumptionService.hasFire(date);
+    @Override
+    public double calculateDailyLaborCost(LocalDate date) {
+        // Récupérer tous les employés
+        List<Employe> employes = employeRepository.findAll();
 
-        // Calculez un score de santé des cultures basé sur les conditions
-        double cropHealthScore = calculateCropHealthScore(avgHumidity, avgTemperature, hasRained, hasFire);
+        // Calculer le coût journalier total (salaire mensuel / 30 jours)
+        double totalDailyLaborCost = employes.stream()
+                .mapToDouble(employe -> employe.getSalaire().doubleValue() / 30.0)
+                .sum();
 
-        // Calculez le revenu estimé basé sur ce score
-        double baseRevenue = 200.0; // Revenu quotidien de base à ajuster
-        return baseRevenue * cropHealthScore;
+        return totalDailyLaborCost;
     }
 
     /**
-     * Calculer un score de santé des cultures basé sur les conditions environnementales
+     * Calculer le coût journalier des achats (engrais, matériel, etc.)
      */
-    private double calculateCropHealthScore(double humidity, double temperature, boolean hasRained, boolean hasFire) {
-        // Initialiser le score à 1.0 (conditions optimales)
-        double score = 1.0;
+    private double calculateDailyPurchaseCost(LocalDate date) {
+        LocalDateTime startOfDay = date.atStartOfDay();
+        LocalDateTime endOfDay = date.atTime(23, 59, 59);
 
+        // Récupérer tous les achats du jour
+        List<Achat> achatsOfDay = achatRepository.findByDateAchatBetween(startOfDay, endOfDay);
 
-        // Impact de l'humidité (optimum entre 40% et 70%)
-        if (humidity < 20) {
-            score *= 0.5; // Trop sec
-        } else if (humidity < 40) {
-            score *= 0.8; // Un peu sec
-        } else if (humidity > 90) {
-            score *= 0.4; // Trop humide
-        } else if (humidity > 70) {
-            score *= 0.7; // Un peu humide
-        }
+        // Calculer le coût total des achats
+        return achatsOfDay.stream()
+                .mapToDouble(achat -> achat.getPrixTotal().doubleValue())
+                .sum();
+    }
 
-        // Impact de la température (optimum entre 18°C et 27°C)
-        if (temperature < 5) {
-            score *= 0.3; // Trop froid
-        } else if (temperature < 18) {
-            score *= 0.7; // Un peu froid
-        } else if (temperature > 35) {
-            score *= 0.4; // Trop chaud
-        } else if (temperature > 27) {
-            score *= 0.7; // Un peu chaud
-        }
+    /**
+     * Calculer le revenu journalier réel basé sur les ventes
+     */
+    private double calculateDailyRevenue(LocalDate date) {
+        LocalDateTime startOfDay = date.atStartOfDay();
+        LocalDateTime endOfDay = date.atTime(23, 59, 59);
 
-        // Impact positif de la pluie (selon la saison et le type de culture)
-        if (hasRained) {
-            score *= 1.1; // Léger bonus pour la pluie (à ajuster selon contexte)
-        }
+        // Récupérer toutes les ventes du jour
+        List<Vente> ventesOfDay = venteRepository.findByDateVenteBetween(startOfDay, endOfDay);
 
-        // Impact catastrophique d'un incendie
-        if (hasFire) {
-            score *= 0.1; // Perte majeure due à l'incendie
-        }
+        // Calculer le revenu total des ventes
+        return ventesOfDay.stream()
+                .mapToDouble(vente -> vente.getPrixTotal().doubleValue())
+                .sum();
+    }
 
-        score = Math.max(0.0, Math.min(score, 1.5));
+    /**
+     * Calculer le rendement journalier réel basé sur les ventes
+     */
+    private double calculateDailyYield(LocalDate date) {
+        LocalDateTime startOfDay = date.atStartOfDay();
+        LocalDateTime endOfDay = date.atTime(23, 59, 59);
 
-        return score;
+        // Récupérer toutes les ventes du jour
+        List<Vente> ventesOfDay = venteRepository.findByDateVenteBetween(startOfDay, endOfDay);
+
+        // Calculer la quantité totale vendue (en kg ou unités)
+        return ventesOfDay.stream()
+                .mapToDouble(Vente::getQuantite)
+                .sum();
     }
 
     /**
@@ -186,7 +202,7 @@ public class ProfitabilityServiceImpl implements ProfitabilityService {
         double totalProfit = reports.stream().mapToDouble(ProfitabilityReport::getProfit).sum();
 
         // Calculer le ROI
-        return (totalProfit / systemCost) * 100; // en pourcentage
+        return totalProfit > 0 ? (totalProfit / systemCost) * 100 : 0; // en pourcentage
     }
 
     @Override
@@ -218,12 +234,12 @@ public class ProfitabilityServiceImpl implements ProfitabilityService {
         double totalEnergyCost = dailyReports.stream().mapToDouble(ProfitabilityReport::getEnergyCost).sum();
         double totalMaintenanceCost = dailyReports.stream().mapToDouble(ProfitabilityReport::getSensorMaintenanceCost).sum();
         double totalLaborCost = dailyReports.stream().mapToDouble(r -> r.getLaborCost() != null ? r.getLaborCost() : 0).sum();
-        double totalFertilizerCost = dailyReports.stream().mapToDouble(r -> r.getFertilizerCost() != null ? r.getFertilizerCost() : 0).sum();
+        double totalPurchaseCost = dailyReports.stream().mapToDouble(r -> r.getFertilizerCost() != null ? r.getFertilizerCost() : 0).sum();
         double totalOtherCosts = dailyReports.stream().mapToDouble(r -> r.getOtherCosts() != null ? r.getOtherCosts() : 0).sum();
-        double totalCost = totalWaterCost + totalEnergyCost + totalMaintenanceCost + totalLaborCost + totalFertilizerCost + totalOtherCosts;
+        double totalCost = totalWaterCost + totalEnergyCost + totalMaintenanceCost + totalLaborCost + totalPurchaseCost + totalOtherCosts;
         double totalRevenue = dailyReports.stream().mapToDouble(ProfitabilityReport::getEstimatedRevenue).sum();
         double totalProfit = totalRevenue - totalCost;
-        double avgProfitMargin = (totalProfit / totalRevenue) * 100;
+        double avgProfitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
         // Créer le rapport mensuel
         ProfitabilityReport monthlyReport = new ProfitabilityReport();
@@ -232,7 +248,7 @@ public class ProfitabilityServiceImpl implements ProfitabilityService {
         monthlyReport.setEnergyCost(totalEnergyCost);
         monthlyReport.setSensorMaintenanceCost(totalMaintenanceCost);
         monthlyReport.setLaborCost(totalLaborCost);
-        monthlyReport.setFertilizerCost(totalFertilizerCost);
+        monthlyReport.setFertilizerCost(totalPurchaseCost);
         monthlyReport.setOtherCosts(totalOtherCosts);
         monthlyReport.setTotalCost(totalCost);
         monthlyReport.setEstimatedRevenue(totalRevenue);
@@ -264,13 +280,12 @@ public class ProfitabilityServiceImpl implements ProfitabilityService {
                 monthlyFinancial.setProfit(monthlyReport.getProfit());
                 result.add(monthlyFinancial);
             } else {
-                // Pas de données pour ce mois, créer des données fictives pour l'exemple
-                // Dans un environnement de production, vous pourriez vouloir sauter ce mois
+                // Pas de données pour ce mois, on met des valeurs nulles ou on skip
                 MonthlyFinancial monthlyFinancial = new MonthlyFinancial();
                 monthlyFinancial.setName(Month.of(month).toString().substring(0, 3));
-                monthlyFinancial.setRevenue(Math.random() * 5000 + 3000); // Exemple de revenus fictifs
-                monthlyFinancial.setCost(Math.random() * 4000 + 2000);    // Exemple de coûts fictifs
-                monthlyFinancial.setProfit(monthlyFinancial.getRevenue() - monthlyFinancial.getCost());
+                monthlyFinancial.setRevenue(0.0);
+                monthlyFinancial.setCost(0.0);
+                monthlyFinancial.setProfit(0.0);
                 result.add(monthlyFinancial);
             }
         }
@@ -279,28 +294,22 @@ public class ProfitabilityServiceImpl implements ProfitabilityService {
     }
 
     /**
-     * Obtenir les données de répartition des coûts pour l'affichage en graphique
+     * Obtenir les données de répartition des coûts basées sur les vraies données
      */
     @Override
     public List<ResourceUsage> getResourceUsageData(LocalDate startDate, LocalDate endDate) {
         List<ProfitabilityReport> reports = getReportsByDateRange(startDate, endDate);
 
         if (reports.isEmpty()) {
-            // Données fictives pour l'exemple
-            List<ResourceUsage> dummyData = new ArrayList<>();
-            dummyData.add(new ResourceUsage("Eau", 2500, "#3b82f6"));
-            dummyData.add(new ResourceUsage("Électricité", 1800, "#eab308"));
-            dummyData.add(new ResourceUsage("Main d'œuvre", 3000, "#ef4444"));
-            dummyData.add(new ResourceUsage("Engrais", 1200, "#22c55e"));
-            dummyData.add(new ResourceUsage("Autres", 800, "#a855f7"));
-            return dummyData;
+            // Retourner des données vides au lieu de données fictives
+            return new ArrayList<>();
         }
 
         // Agréger les coûts par catégorie
         double totalWaterCost = reports.stream().mapToDouble(ProfitabilityReport::getWaterCost).sum();
         double totalEnergyCost = reports.stream().mapToDouble(ProfitabilityReport::getEnergyCost).sum();
         double totalLaborCost = reports.stream().mapToDouble(r -> r.getLaborCost() != null ? r.getLaborCost() : 0).sum();
-        double totalFertilizerCost = reports.stream().mapToDouble(r -> r.getFertilizerCost() != null ? r.getFertilizerCost() : 0).sum();
+        double totalPurchaseCost = reports.stream().mapToDouble(r -> r.getFertilizerCost() != null ? r.getFertilizerCost() : 0).sum();
         double totalOtherCosts = reports.stream().mapToDouble(r ->
                 (r.getOtherCosts() != null ? r.getOtherCosts() : 0) +
                         (r.getSensorMaintenanceCost() != null ? r.getSensorMaintenanceCost() : 0)).sum();
@@ -310,65 +319,157 @@ public class ProfitabilityServiceImpl implements ProfitabilityService {
         result.add(new ResourceUsage("Eau", totalWaterCost, "#3b82f6"));
         result.add(new ResourceUsage("Électricité", totalEnergyCost, "#eab308"));
         result.add(new ResourceUsage("Main d'œuvre", totalLaborCost, "#ef4444"));
-        result.add(new ResourceUsage("Engrais", totalFertilizerCost, "#22c55e"));
+        result.add(new ResourceUsage("Achats/Matériel", totalPurchaseCost, "#22c55e"));
         result.add(new ResourceUsage("Autres", totalOtherCosts, "#a855f7"));
 
         return result;
     }
 
     /**
-     * Obtenir les données de rentabilité par culture
+     * Obtenir les données de rentabilité par culture basées sur les ventes réelles
      */
     @Override
     public List<CropProfitability> getCropProfitabilityData(LocalDate startDate, LocalDate endDate) {
-        // Dans un système réel, vous feriez une requête pour regrouper les données par type de culture
-        // Ici, nous allons créer des données simulées similaires à celles utilisées dans le frontend
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
+
+        // Récupérer toutes les ventes de la période
+        List<Vente> ventes = venteRepository.findByDateVenteBetween(startDateTime, endDateTime);
+
+        // Récupérer TOUS les achats antérieurs à la fin de période
+        // (car les produits vendus peuvent avoir été achetés avant la période de vente)
+        List<Achat> achats = achatRepository.findByDateAchatBefore(endDateTime);
+
+        // Grouper les ventes par produit
+        Map<Product, List<Vente>> ventesByProduct = ventes.stream()
+                .collect(Collectors.groupingBy(Vente::getProduit));
+
+        // Grouper les achats par produit
+        Map<Product, List<Achat>> achatsByProduct = achats.stream()
+                .collect(Collectors.groupingBy(Achat::getProduit));
 
         List<CropProfitability> result = new ArrayList<>();
 
-        // Vous pourriez remplacer ceci par une requête réelle pour regrouper par type de culture
-        Map<CropType, List<ProfitabilityReport>> reportsByCrop = getReportsByDateRange(startDate, endDate)
-                .stream()
-                .filter(r -> r.getCropType() != null)
-                .collect(Collectors.groupingBy(ProfitabilityReport::getCropType));
+        // Pour chaque produit vendu, calculer la rentabilité
+        for (Map.Entry<Product, List<Vente>> entry : ventesByProduct.entrySet()) {
+            Product product = entry.getKey();
+            List<Vente> productVentes = entry.getValue();
 
-        // Si nous avons des données réelles
-        if (!reportsByCrop.isEmpty()) {
-            for (Map.Entry<CropType, List<ProfitabilityReport>> entry : reportsByCrop.entrySet()) {
-                CropType cropType = entry.getKey();
-                List<ProfitabilityReport> cropReports = entry.getValue();
+            // Calculer le revenu total pour ce produit
+            double totalRevenue = productVentes.stream()
+                    .mapToDouble(vente -> vente.getPrixTotal().doubleValue())
+                    .sum();
 
-                double totalRevenue = cropReports.stream().mapToDouble(ProfitabilityReport::getEstimatedRevenue).sum();
-                double totalCost = cropReports.stream().mapToDouble(ProfitabilityReport::getTotalCost).sum();
-                double totalProfit = totalRevenue - totalCost;
+            // Calculer les quantités vendues pour la période
+            int quantiteVendue = productVentes.stream()
+                    .mapToInt(Vente::getQuantite)
+                    .sum();
 
-                CropProfitability cropProfitability = new CropProfitability();
-                cropProfitability.setName(cropType.name().substring(0, 1).toUpperCase() + cropType.name().substring(1).toLowerCase());
-                cropProfitability.setRevenue(totalRevenue);
-                cropProfitability.setCost(totalCost);
-                cropProfitability.setProfit(totalProfit);
+            // Calculer le coût basé sur le prix d'achat moyen et les quantités vendues
+            double totalCost = 0.0;
+            if (achatsByProduct.containsKey(product)) {
+                List<Achat> productAchats = achatsByProduct.get(product);
 
-                result.add(cropProfitability);
+                // Calculer le coût unitaire moyen pondéré
+                double coutUnitaireMoyen = calculateAverageUnitCost(productAchats);
+                totalCost = coutUnitaireMoyen * quantiteVendue;
+            } else {
+                // Si aucun achat trouvé, estimer le coût à 70% du prix de vente
+                totalCost = product.getPrix().doubleValue() * quantiteVendue * 0.7;
             }
-        } else {
-            // Données fictives similaires à celles du frontend
-            result.add(new CropProfitability("Tomates", 5200, 3100, 2100));
-            result.add(new CropProfitability("Laitue", 3800, 2200, 1600));
-            result.add(new CropProfitability("Concombres", 4500, 2800, 1700));
-            result.add(new CropProfitability("Poivrons", 6200, 4100, 2100));
+
+            double totalProfit = totalRevenue - totalCost;
+
+            CropProfitability cropProfitability = new CropProfitability();
+            cropProfitability.setName(product.getNom());
+            cropProfitability.setRevenue(totalRevenue);
+            cropProfitability.setCost(totalCost);
+            cropProfitability.setProfit(totalProfit);
+
+            result.add(cropProfitability);
         }
 
         return result;
     }
 
     /**
-     * Obtenir les données d'efficacité d'eau par zone
+     * Méthode helper pour calculer le coût unitaire moyen pondéré
      */
+    private double calculateAverageUnitCost(List<Achat> achats) {
+        if (achats == null || achats.isEmpty()) {
+            return 0.0;
+        }
+
+        double totalCost = achats.stream()
+                .mapToDouble(achat -> achat.getPrixTotal().doubleValue())
+                .sum();
+
+        int totalQuantity = achats.stream()
+                .mapToInt(Achat::getQuantite)
+                .sum();
+
+        return totalQuantity > 0 ? totalCost / totalQuantity : 0.0;
+    }
+    /**
+
+    @Override
+    public List<CropProfitability> getCropProfitabilityData(LocalDate startDate, LocalDate endDate) {
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
+
+        // Récupérer toutes les ventes de la période
+        List<Vente> ventes = venteRepository.findByDateVenteBetween(startDateTime, endDateTime);
+        List<Achat> achats = achatRepository.findByDateAchatBetween(startDateTime, endDateTime);
+
+        // Grouper les ventes par produit
+        Map<Product, List<Vente>> ventesByProduct = ventes.stream()
+                .collect(Collectors.groupingBy(Vente::getProduit));
+
+        // Grouper les achats par produit
+        Map<Product, List<Achat>> achatsByProduct = achats.stream()
+                .collect(Collectors.groupingBy(Achat::getProduit));
+
+        List<CropProfitability> result = new ArrayList<>();
+
+        // Pour chaque produit vendu, calculer la rentabilité
+        for (Map.Entry<Product, List<Vente>> entry : ventesByProduct.entrySet()) {
+            Product product = entry.getKey();
+            List<Vente> productVentes = entry.getValue();
+
+            // Calculer le revenu total pour ce produit
+            double totalRevenue = productVentes.stream()
+                    .mapToDouble(vente -> vente.getPrixTotal().doubleValue())
+                    .sum();
+
+            // Calculer le coût total pour ce produit (achats)
+            double totalCost = 0.0;
+            if (achatsByProduct.containsKey(product)) {
+                totalCost = achatsByProduct.get(product).stream()
+                        .mapToDouble(achat -> achat.getPrixTotal().doubleValue())
+                        .sum();
+            }
+
+            double totalProfit = totalRevenue - totalCost;
+
+            CropProfitability cropProfitability = new CropProfitability();
+            cropProfitability.setName(product.getNom());
+            cropProfitability.setRevenue(totalRevenue);
+            cropProfitability.setCost(totalCost);
+            cropProfitability.setProfit(totalProfit);
+
+            result.add(cropProfitability);
+        }
+
+        return result;
+    } */
+
+    /**
+     * Obtenir les données d'efficacité d'eau par zone (garder la logique existante pour l'instant)
+
     @Override
     public List<WaterEfficiency> getWaterEfficiencyData() {
-        // Dans un système réel, vous calculeriez cela à partir des données des capteurs
-        // Pour l'instant, nous retournons des données fictives similaires à celles du frontend
-
+        // Cette méthode nécessiterait des données plus complexes sur les zones et l'utilisation d'eau
+        // Pour l'instant, on garde la logique existante
         List<WaterEfficiency> result = new ArrayList<>();
         result.add(new WaterEfficiency("TOMATOES", 0.85, 1200));
         result.add(new WaterEfficiency("RICE", 0.72, 1800));
@@ -377,9 +478,34 @@ public class ProfitabilityServiceImpl implements ProfitabilityService {
 
         return result;
     }
+*/
+    @Override
+    @Scheduled(cron = "0 * * * * *") // chaque jour à minuit
+    public List<WaterEfficiency> getWaterEfficiencyData() {
+        Zone zoneCapteur = Zone.Zone_A; // la seule zone mesurée actuellement
+        LocalDate today = LocalDate.now();
+
+        double waterConsumed = resourceConsumptionService.getWaterConsumption(today);
+
+        List<Product> produitsZone = productRepository.findByCategory_Zone(zoneCapteur);
+
+        double totalVentes = produitsZone.stream()
+                .mapToDouble(p -> p.getPrix().doubleValue() * p.getQuantite())
+                .sum();
+
+        double efficacite = waterConsumed > 0 ? totalVentes / waterConsumed : 0;
+
+        WaterEfficiency efficiency = new WaterEfficiency(
+                zoneCapteur.name(),
+                efficacite,
+                waterConsumed
+        );
+
+        return List.of(efficiency);
+    }
 
     /**
-     * Obtenir les statistiques de base pour les KPIs
+     * Obtenir les statistiques de base pour les KPIs basées sur les vraies données
      */
     @Override
     public Map<String, Object> getDashboardKPIs(LocalDate startDate, LocalDate endDate) {
@@ -391,7 +517,8 @@ public class ProfitabilityServiceImpl implements ProfitabilityService {
         double profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
         // Calculer les variations par rapport à la période précédente
-        LocalDate prevStartDate = startDate.minusDays(endDate.toEpochDay() - startDate.toEpochDay() + 1);
+        long periodDays = endDate.toEpochDay() - startDate.toEpochDay() + 1;
+        LocalDate prevStartDate = startDate.minusDays(periodDays);
         LocalDate prevEndDate = startDate.minusDays(1);
         List<ProfitabilityReport> prevReports = getReportsByDateRange(prevStartDate, prevEndDate);
 
@@ -402,8 +529,8 @@ public class ProfitabilityServiceImpl implements ProfitabilityService {
 
         double revenueChange = prevTotalRevenue > 0 ? ((totalRevenue - prevTotalRevenue) / prevTotalRevenue) * 100 : 0;
         double costChange = prevTotalCost > 0 ? ((totalCost - prevTotalCost) / prevTotalCost) * 100 : 0;
-        double profitChange = prevTotalProfit > 0 ? ((totalProfit - prevTotalProfit) / prevTotalProfit) * 100 : 0;
-        double marginChange = prevProfitMargin > 0 ? (profitMargin - prevProfitMargin) : 0;
+        double profitChange = prevTotalProfit != 0 ? ((totalProfit - prevTotalProfit) / Math.abs(prevTotalProfit)) * 100 : 0;
+        double marginChange = profitMargin - prevProfitMargin;
 
         Map<String, Object> result = new HashMap<>();
         result.put("totalRevenue", totalRevenue);
@@ -426,69 +553,53 @@ public class ProfitabilityServiceImpl implements ProfitabilityService {
 
         return result;
     }
-    // Ajoutez ces méthodes à votre classe ProfitabilityServiceImpl
 
     /**
      * Obtenir les données financières hebdomadaires pour l'affichage des graphiques
      */
     @Override
     public List<WeeklyFinancial> getWeeklyFinancialData() {
-        // Liste des jours de la semaine en français (ou vous pouvez utiliser les codes courts si préféré)
         String[] joursDelaSemaine = {"Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"};
 
-        // Date actuelle
         LocalDate now = LocalDate.now();
-
-        // Déterminer le jour de la semaine actuel (1 = Lundi, ... 7 = Dimanche)
         int jourActuel = now.getDayOfWeek().getValue();
-
-        // Calculer le début de la semaine actuelle (lundi)
         LocalDate debutDeSemaine = now.minusDays(jourActuel - 1);
-        // Calculer la fin de la semaine actuelle (dimanche)
-        LocalDate finDeSemaine = debutDeSemaine.plusDays(6);
 
         List<WeeklyFinancial> result = new ArrayList<>();
 
-        // Créer une entrée pour chaque jour de la semaine actuelle
         for (int i = 0; i < 7; i++) {
             LocalDate jourCourant = debutDeSemaine.plusDays(i);
-
-            // Récupérer les rapports pour ce jour spécifique de la semaine actuelle
             List<ProfitabilityReport> rapportsJournaliers = getReportsByDateRange(jourCourant, jourCourant);
 
-            // Si des données existent pour ce jour
+            WeeklyFinancial donneesJour = new WeeklyFinancial();
+            donneesJour.setName(joursDelaSemaine[i]);
+
             if (!rapportsJournaliers.isEmpty()) {
                 double totalRevenue = rapportsJournaliers.stream().mapToDouble(ProfitabilityReport::getEstimatedRevenue).sum();
                 double totalCost = rapportsJournaliers.stream().mapToDouble(ProfitabilityReport::getTotalCost).sum();
                 double totalProfit = totalRevenue - totalCost;
 
-                WeeklyFinancial donneesJour = new WeeklyFinancial();
-                donneesJour.setName(joursDelaSemaine[i]);
                 donneesJour.setRevenue(totalRevenue);
                 donneesJour.setCost(totalCost);
                 donneesJour.setProfit(totalProfit);
-
-                result.add(donneesJour);
             } else {
-                // Si pas de données, créer des données fictives pour la démonstration
-                WeeklyFinancial donneesJour = new WeeklyFinancial();
-                donneesJour.setName(joursDelaSemaine[i]);
-                donneesJour.setRevenue(Math.random() * 1200 + 800); // Revenus fictifs entre 800 et 2000
-                donneesJour.setCost(Math.random() * 1000 + 600);    // Coûts fictifs entre 600 et 1600
-                donneesJour.setProfit(donneesJour.getRevenue() - donneesJour.getCost());
-
-                result.add(donneesJour);
+                // Pas de données, mettre à zéro
+                donneesJour.setRevenue(0.0);
+                donneesJour.setCost(0.0);
+                donneesJour.setProfit(0.0);
             }
+
+            result.add(donneesJour);
         }
 
         return result;
     }
+
     /**
      * Obtenir les données financières annuelles pour l'affichage des graphiques
      */
     @Override
     public List<YearlyFinancial> getYearlyFinancialData() {
-        // Pour démonstration, nous allons générer des données pour les 5 dernières années
         List<YearlyFinancial> result = new ArrayList<>();
         int currentYear = LocalDate.now().getYear();
 
@@ -496,40 +607,49 @@ public class ProfitabilityServiceImpl implements ProfitabilityService {
             LocalDate startOfYear = LocalDate.of(year, 1, 1);
             LocalDate endOfYear = LocalDate.of(year, 12, 31);
 
-            // Récupérer tous les rapports pour cette année
             List<ProfitabilityReport> yearlyReports = getReportsByDateRange(startOfYear, endOfYear);
 
-            // Si des données existent pour cette année
+            YearlyFinancial yearData = new YearlyFinancial();
+            yearData.setName(String.valueOf(year));
+
             if (!yearlyReports.isEmpty()) {
                 double totalRevenue = yearlyReports.stream().mapToDouble(ProfitabilityReport::getEstimatedRevenue).sum();
                 double totalCost = yearlyReports.stream().mapToDouble(ProfitabilityReport::getTotalCost).sum();
                 double totalProfit = totalRevenue - totalCost;
 
-                YearlyFinancial yearData = new YearlyFinancial();
-                yearData.setName(String.valueOf(year));
                 yearData.setRevenue(totalRevenue);
                 yearData.setCost(totalCost);
                 yearData.setProfit(totalProfit);
-
-                result.add(yearData);
             } else {
-                // Si pas de données, créer des données fictives
-                YearlyFinancial yearData = new YearlyFinancial();
-                yearData.setName(String.valueOf(year));
-
-                // Augmenter légèrement les valeurs chaque année pour une tendance réaliste
-                double baseRevenue = 20000 + (year - (currentYear - 4)) * 5000;
-                double baseCost = 15000 + (year - (currentYear - 4)) * 3500;
-
-                // Ajouter une variation aléatoire
-                yearData.setRevenue(baseRevenue + (Math.random() * 5000 - 2500));
-                yearData.setCost(baseCost + (Math.random() * 3000 - 1500));
-                yearData.setProfit(yearData.getRevenue() - yearData.getCost());
-
-                result.add(yearData);
+                // Pas de données pour cette année
+                yearData.setRevenue(0.0);
+                yearData.setCost(0.0);
+                yearData.setProfit(0.0);
             }
+
+            result.add(yearData);
         }
 
         return result;
     }
+
+    public List<LocalDate> getDistinctDates() {
+        List<java.sql.Date> dates = sensorRepository.findDistinctDatesNative();
+        return dates.stream()
+                .map(java.sql.Date::toLocalDate)
+                .collect(Collectors.toList());
+    }
+
+    @Scheduled(cron = "0 * * * * *") // Tous les jours à 2h du matin
+    public void generateMissingDailyReports() {
+        List<LocalDate> datesAvecData = getDistinctDates();  // <-- ici on utilise la méthode avec conversion
+        for (LocalDate date : datesAvecData) {
+            if (!profitabilityReportRepository.existsByDate(date)) {
+                generateDailyReport(date);
+            }
+        }
+    }
+
+
+
 }

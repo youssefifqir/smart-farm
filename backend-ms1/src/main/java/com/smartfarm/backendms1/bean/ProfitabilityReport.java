@@ -27,8 +27,8 @@ public class ProfitabilityReport {
     private Double profitMargin;
 
     private String timeframe;
-    @Enumerated(EnumType.STRING)
-    private CropType cropType;
+    //@Enumerated(EnumType.STRING)
+    //private CropType cropType;
     @Enumerated(EnumType.STRING)
     private Zone zone;
 

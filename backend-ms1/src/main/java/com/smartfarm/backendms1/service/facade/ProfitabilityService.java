@@ -17,6 +17,8 @@ public interface ProfitabilityService {
      */
     ProfitabilityReport generateDailyReport(LocalDate date);
 
+    double calculateDailyLaborCost(LocalDate date);
+
     /**
      * Récupérer un rapport par son ID
      * @param id ID du rapport

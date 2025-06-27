@@ -25,7 +25,7 @@ public class ProfitabilityReportConverter {
             item.setProfit(dto.getProfit());
             item.setProfitMargin(dto.getProfitMargin());  // Ajout de profitMargin
             item.setTimeframe(dto.getTimeframe());        // Ajout de timeframe
-            item.setCropType(dto.getCropType());          // Ajout de cropType (Enum)
+            //item.setCropType(dto.getCropType());          // Ajout de cropType (Enum)
             item.setZone(dto.getZone());                  // Ajout de zone (Enum)
             item.setLaborCost(dto.getLaborCost());        // Ajout de laborCost
             item.setFertilizerCost(dto.getFertilizerCost());  // Ajout de fertilizerCost
@@ -49,7 +49,7 @@ public class ProfitabilityReportConverter {
             dto.setProfit(item.getProfit());
             dto.setProfitMargin(item.getProfitMargin());  // Ajout de profitMargin
             dto.setTimeframe(item.getTimeframe());        // Ajout de timeframe
-            dto.setCropType(item.getCropType());          // Ajout de cropType (Enum)
+            //dto.setCropType(item.getCropType());          // Ajout de cropType (Enum)
             dto.setZone(item.getZone());                  // Ajout de zone (Enum)
             dto.setLaborCost(item.getLaborCost());        // Ajout de laborCost
             dto.setFertilizerCost(item.getFertilizerCost());  // Ajout de fertilizerCost

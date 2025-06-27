@@ -5,26 +5,28 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
 @Entity
-public class Product {
+public class Vente {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String nom;
-    private BigDecimal prix;
     private int quantite;
+
+    private BigDecimal prixTotal;
+
+    private LocalDateTime dateVente;
 
     @ManyToOne
     @JoinColumn()
-    private Category category;
-    @Enumerated(EnumType.STRING)
+    private Product produit;
 
-    private Zone zone;
-
-
+    @ManyToOne
+    @JoinColumn()
+    private Client client;
 }

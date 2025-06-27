@@ -2,6 +2,7 @@ import axios from 'axios';
 
 // This would be replaced with your actual API endpoints
 const API_BASE_URL_MS1 = 'http://localhost:8081/api/v1/profitability';
+const API_BASE_URL_PDF = 'http://localhost:8081/api/reports/pdf'; // Nouvelle URL pour les rapports PDF
 const API_BASE_URL_MS2 = 'https://api.example.com/ms2';
 
 // Create axios instances for each microservice
@@ -11,6 +12,16 @@ const ms1Api = axios.create({
     headers: {
         'Content-Type': 'application/json',
     }
+});
+
+// Nouvelle instance axios pour les rapports PDF
+const pdfApi = axios.create({
+    baseURL: API_BASE_URL_PDF,
+    timeout: 30000, // Timeout plus long pour la génération de PDF
+    headers: {
+        'Content-Type': 'application/json',
+    },
+    responseType: 'blob' // Important pour recevoir les données binaires du PDF
 });
 
 const ms2Api = axios.create({
@@ -83,6 +94,72 @@ export const profitabilityService = {
             return response.data;
         } catch (error) {
             console.error('Erreur lors de la génération du rapport quotidien:', error);
+            throw error;
+        }
+    },
+
+    // NOUVELLE FONCTION: Générer et télécharger un rapport PDF quotidien
+    generateDailyPdfReport: async (date: string) => {
+        try {
+            const response = await pdfApi.get('/daily', {
+                params: { date }
+            });
+
+            // Créer un blob à partir de la réponse
+            const blob = new Blob([response.data], { type: 'application/pdf' });
+
+            // Créer un lien de téléchargement temporaire
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+
+            // Nom du fichier avec la date
+            const fileName = `rapport_quotidien_${date}.pdf`;
+            link.download = fileName;
+
+            // Déclencher le téléchargement
+            document.body.appendChild(link);
+            link.click();
+
+            // Nettoyer
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(downloadUrl);
+
+            return { success: true, fileName };
+        } catch (error) {
+            console.error('Erreur lors de la génération du rapport PDF quotidien:', error);
+            throw error;
+        }
+    },
+    generateMonthlyPdfReport: async (year: number, month: number) => {
+        try {
+            const response = await pdfApi.get('/monthly-pdf', {
+                params: { year, month }
+            });
+
+            // Créer un blob à partir de la réponse
+            const blob = new Blob([response.data], { type: 'application/pdf' });
+
+            // Créer un lien de téléchargement temporaire
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+
+            // Nom du fichier avec l'année et le mois
+            const fileName = `rapport_mensuel_${year}_${month.toString().padStart(2, '0')}.pdf`;
+            link.download = fileName;
+
+            // Déclencher le téléchargement
+            document.body.appendChild(link);
+            link.click();
+
+            // Nettoyer
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(downloadUrl);
+
+            return { success: true, fileName };
+        } catch (error) {
+            console.error('Erreur lors de la génération du rapport PDF mensuel:', error);
             throw error;
         }
     },

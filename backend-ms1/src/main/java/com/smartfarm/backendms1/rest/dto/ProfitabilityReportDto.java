@@ -22,7 +22,7 @@ public class ProfitabilityReportDto {
     private String timeframe;                    // Période de temps (par exemple : "daily", "weekly", etc.)
 
     // Enumérations
-    private CropType cropType;                  // Type de culture (par exemple : WHEAT, CORN, etc.)
+   // private CropType cropType;                  // Type de culture (par exemple : WHEAT, CORN, etc.)
     private Zone zone;                           // Zone géographique (par exemple : NORTH, SOUTH, etc.)
 
     // Autres coûts

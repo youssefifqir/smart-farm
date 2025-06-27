@@ -1,8 +1,8 @@
 package com.smartfarm.backendms1.bean;
 
 public enum Zone {
-    NORTH,
-    SOUTH,
-    EAST,
-    WEST;
+    Zone_A,
+    Zone_B,
+    Zone_C,
+    Zone_D;
 }

@@ -1,24 +1,22 @@
 package com.smartfarm.backendms1.bean;
 
-import com.smartfarm.backendms1.bean.Product;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.List;
-@Getter
-@Setter
+import java.math.BigDecimal;
+
+@Getter @Setter
 @Entity
-public class Category {
+public class Employe {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-
     private String nom;
-
-    @Enumerated(EnumType.STRING)
-    private Zone zone;
-
+    private String prenom;
+    private String email;
+    private String poste;
+    private BigDecimal salaire;
 }

@@ -30,7 +30,8 @@ const ProfitabilityDashboard: React.FC = () => {
         profitGrowth: 0,
         marginGrowth: 0,
         waterUsage: 0,
-        energyUsage: 0
+        energyUsage: 0,
+        roi: 0
     });
 
     // État pour suivre la date de dernière mise à jour
@@ -97,6 +98,8 @@ const ProfitabilityDashboard: React.FC = () => {
                 setResourceUsageData(resourceData);
             }
 
+
+
             // Chargement des données de rentabilité par culture
             const cropData = await profitabilityService.getCropProfitabilityData(startDate, endDate);
             if (cropData) {
@@ -122,10 +125,18 @@ const ProfitabilityDashboard: React.FC = () => {
                     profitGrowth: dashboardKpis.profitGrowth || 0,
                     marginGrowth: dashboardKpis.marginGrowth || 0,
                     waterUsage: dashboardKpis.waterUsage || 0,
-                    energyUsage: dashboardKpis.energyUsage || 0
+                    energyUsage: dashboardKpis.energyUsage || 0,
+                    roi: 0
                 });
             }
-
+            // Chargement du ROI
+            const roiData = await profitabilityService.calculateROI(startDate, endDate);
+            if (roiData !== undefined && roiData !== null) {
+                setKpis(prevKpis => ({
+                    ...prevKpis,
+                    roi: roiData
+                }));
+            }
             // Mettre à jour la date de dernière mise à jour des données
             setLastUpdated(new Date());
         } catch (err) {
@@ -226,27 +237,60 @@ const ProfitabilityDashboard: React.FC = () => {
     };
 
     // Fonction pour générer un rapport (quotidien ou mensuel)
+    // Fonction pour générer un rapport (quotidien ou mensuel) - VERSION MISE À JOUR
     const generateReport = async (type: 'daily' | 'monthly') => {
         try {
             setIsLoading(true);
+            setError(null);
             const today = new Date();
 
             if (type === 'daily') {
-                // Générer un rapport quotidien pour aujourd'hui
-                const dateStr = today.toISOString().split('T')[0];
-                await profitabilityService.generateDailyReport(dateStr);
+                // Générer un rapport PDF quotidien pour aujourd'hui
+                const dateStr = today.toISOString().split('T')[0]; // Format YYYY-MM-DD
+
+                // Appeler la nouvelle fonction pour générer et télécharger le PDF
+                const result = await profitabilityService.generateDailyPdfReport(dateStr);
+
+                if (result.success) {
+                    // Optionnel : afficher un message de succès
+                    console.log(`Rapport PDF quotidien généré avec succès : ${result.fileName}`);
+
+                    // Vous pouvez ajouter une notification de succès ici si vous avez un système de notifications
+                    // Par exemple : showNotification('Rapport PDF généré avec succès', 'success');
+                }
             } else {
-                // Générer un rapport mensuel pour le mois en cours
+                // Générer un rapport mensuel (garde la logique existante)
                 const year = today.getFullYear();
                 const month = today.getMonth() + 1; // getMonth() retourne 0-11
-                await profitabilityService.generateMonthlyReport(year, month);
+                await profitabilityService.generateMonthlyPdfReport(year, month);
+
+                // Recharger les données après la génération du rapport mensuel
+                await loadAllData();
             }
 
-            // Recharger les données après la génération du rapport
-            await loadAllData();
         } catch (err) {
             console.error(`Erreur lors de la génération du rapport ${type}:`, err);
-            setError(`Impossible de générer le rapport ${type === 'daily' ? 'quotidien' : 'mensuel'}. Veuillez réessayer plus tard.`);
+
+            let errorMessage = `Impossible de générer le rapport ${type === 'daily' ? 'quotidien' : 'mensuel'}.`;
+
+            // Gestion d'erreurs plus spécifique pour le PDF
+            if (type === 'daily') {
+                if (err instanceof Error) {
+                    if (err.message.includes('Network Error')) {
+                        errorMessage += ' Vérifiez votre connexion réseau.';
+                    } else if (err.message.includes('500')) {
+                        errorMessage += ' Erreur serveur lors de la génération du PDF.';
+                    } else if (err.message.includes('404')) {
+                        errorMessage += ' Service PDF non disponible.';
+                    } else {
+                        errorMessage += ' Veuillez réessayer plus tard.';
+                    }
+                }
+            } else {
+                errorMessage += ' Veuillez réessayer plus tard.';
+            }
+
+            setError(errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -279,8 +323,8 @@ const ProfitabilityDashboard: React.FC = () => {
             <header className="mb-8">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-800">Tableau de Bord de Rentabilité</h1>
-                        <p className="text-gray-600">Analyse de la performance économique de votre Smart Farm</p>
+                        <h1 className="text-3xl font-bold text-gray-800">Profitability Dashboard</h1>
+                        <p className="text-gray-600">Analysis of the Economic Performance of Your Smart Farm</p>
                     </div>
                     <div className="flex space-x-4">
                         <button
@@ -289,7 +333,7 @@ const ProfitabilityDashboard: React.FC = () => {
                             disabled={isLoading}
                         >
                             <Clock size={18} className="mr-2" />
-                            Générer Rapport Quotidien
+                            Generate Daily Report
                         </button>
                         <button
                             className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center shadow hover:bg-blue-600 transition"
@@ -297,7 +341,7 @@ const ProfitabilityDashboard: React.FC = () => {
                             disabled={isLoading}
                         >
                             <Clock size={18} className="mr-2" />
-                            Générer Rapport Mensuel
+                            Generate Monthly Report
                         </button>
                     </div>
                 </div>
@@ -308,23 +352,23 @@ const ProfitabilityDashboard: React.FC = () => {
                             className={`px-4 py-2 rounded-lg ${timeFrame === 'weekly' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
                             onClick={() => setTimeFrame('weekly')}
                         >
-                            Hebdomadaire
+                            Weekly
                         </button>
                         <button
                             className={`px-4 py-2 rounded-lg ${timeFrame === 'monthly' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
                             onClick={() => setTimeFrame('monthly')}
                         >
-                            Mensuel
+                            Monthly
                         </button>
                         <button
                             className={`px-4 py-2 rounded-lg ${timeFrame === 'yearly' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
                             onClick={() => setTimeFrame('yearly')}
                         >
-                            Annuel
+                            Yearly
                         </button>
                     </div>
                     <div className="flex items-center text-sm text-gray-500">
-                        <span className="mr-2">Dernière mise à jour: {formatLastUpdated()}</span>
+                        <span className="mr-2">Last Update: {formatLastUpdated()}</span>
                         <button
                             onClick={loadAllData}
                             className="p-1 rounded-full hover:bg-gray-200 transition"
@@ -342,7 +386,7 @@ const ProfitabilityDashboard: React.FC = () => {
                 </div>
             ) : error ? (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                    <strong className="font-bold">Erreur ! </strong>
+                    <strong className="font-bold">Error ! </strong>
                     <span className="block sm:inline">{error}</span>
                 </div>
             ) : (
@@ -352,7 +396,7 @@ const ProfitabilityDashboard: React.FC = () => {
                         <div className="bg-white p-6 rounded-xl shadow">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm text-gray-500">Revenu Total</p>
+                                    <p className="text-sm text-gray-500">Total Revenue</p>
                                     <p className="text-2xl font-bold">{kpis.totalRevenue.toLocaleString()} €</p>
                                 </div>
                                 <div className="bg-green-100 p-3 rounded-full">
@@ -361,14 +405,14 @@ const ProfitabilityDashboard: React.FC = () => {
                             </div>
                             <div className="mt-4 flex items-center text-sm text-green-600">
                                 <TrendingUp size={16} />
-                                <span className="ml-1">+{kpis.revenueGrowth}% par rapport à la période précédente</span>
+                                <span className="ml-1">+{kpis.revenueGrowth}% Compared to the previous period</span>
                             </div>
                         </div>
 
                         <div className="bg-white p-6 rounded-xl shadow">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm text-gray-500">Coûts Opérationnels</p>
+                                    <p className="text-sm text-gray-500">Operating Costs</p>
                                     <p className="text-2xl font-bold">{kpis.totalCost.toLocaleString()} €</p>
                                 </div>
                                 <div className="bg-red-100 p-3 rounded-full">
@@ -377,7 +421,7 @@ const ProfitabilityDashboard: React.FC = () => {
                             </div>
                             <div className="mt-4 flex items-center text-sm text-red-600">
                                 <TrendingUp size={16} />
-                                <span className="ml-1">+{kpis.costGrowth}% par rapport à la période précédente</span>
+                                <span className="ml-1">+{kpis.costGrowth}% Compared to the previous period</span>
                             </div>
                         </div>
 
@@ -393,14 +437,14 @@ const ProfitabilityDashboard: React.FC = () => {
                             </div>
                             <div className="mt-4 flex items-center text-sm text-green-600">
                                 <TrendingUp size={16} />
-                                <span className="ml-1">+{kpis.profitGrowth}% par rapport à la période précédente</span>
+                                <span className="ml-1">+{kpis.profitGrowth}% Compared to the previous period</span>
                             </div>
                         </div>
 
                         <div className="bg-white p-6 rounded-xl shadow">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm text-gray-500">Marge Bénéficiaire</p>
+                                    <p className="text-sm text-gray-500">Profit Margin</p>
                                     <p className="text-2xl font-bold">{kpis.profitMargin.toFixed(1)}%</p>
                                 </div>
                                 <div className="bg-purple-100 p-3 rounded-full">
@@ -409,7 +453,7 @@ const ProfitabilityDashboard: React.FC = () => {
                             </div>
                             <div className="mt-4 flex items-center text-sm text-green-600">
                                 <TrendingUp size={16} />
-                                <span className="ml-1">+{kpis.marginGrowth}% par rapport à la période précédente</span>
+                                <span className="ml-1">+{kpis.marginGrowth}% Compared to the previous period</span>
                             </div>
                         </div>
                     </div>
@@ -417,7 +461,7 @@ const ProfitabilityDashboard: React.FC = () => {
                     {/* Graphiques de revenus et coûts */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                         <div className="bg-white p-6 rounded-xl shadow">
-                            <h2 className="text-xl font-bold mb-4">{getChartTitle("Revenus vs Coûts")}</h2>
+                            <h2 className="text-xl font-bold mb-4">{getChartTitle("Revenue vs Costs")}</h2>
                             <ResponsiveContainer width="100%" height={300}>
                                 <LineChart data={mergedData}>
                                     <CartesianGrid strokeDasharray="3 3" />
@@ -426,7 +470,7 @@ const ProfitabilityDashboard: React.FC = () => {
                                     <Tooltip />
                                     <Legend />
                                     <Line type="monotone"  dataKey="revenus" name="Revenus" stroke="#22c55e" strokeWidth={2} />
-                                    <Line type="monotone"  dataKey="couts" name="Coûts" stroke="#ef4444" strokeWidth={2} />
+                                    <Line type="monotone"  dataKey="couts" name="Costs" stroke="#ef4444" strokeWidth={2} />
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
@@ -449,7 +493,7 @@ const ProfitabilityDashboard: React.FC = () => {
                     {/* Répartition des coûts et rentabilité par culture */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                         <div className="bg-white p-6 rounded-xl shadow">
-                            <h2 className="text-xl font-bold mb-4">Répartition des Coûts</h2>
+                            <h2 className="text-xl font-bold mb-4">Cost Distribution</h2>
                             <ResponsiveContainer width="100%" height={300}>
                                 <PieChart>
                                     <Pie
@@ -474,7 +518,7 @@ const ProfitabilityDashboard: React.FC = () => {
                         </div>
 
                         <div className="bg-white p-6 rounded-xl shadow">
-                            <h2 className="text-xl font-bold mb-4">Rentabilité par Culture</h2>
+                            <h2 className="text-xl font-bold mb-4">Profitability by Crop</h2>
                             <ResponsiveContainer width="100%" height={300}>
                                 <BarChart data={cropProfitabilityData}>
                                     <CartesianGrid strokeDasharray="3 3" />
@@ -483,7 +527,7 @@ const ProfitabilityDashboard: React.FC = () => {
                                     <Tooltip />
                                     <Legend />
                                     <Bar dataKey="revenue" name="Revenus" fill="#22c55e" />
-                                    <Bar dataKey="cost" name="Coûts" fill="#ef4444" />
+                                    <Bar dataKey="cost" name="cost" fill="#ef4444" />
                                     <Bar dataKey="profit" name="Profit" fill="#3b82f6" />
                                 </BarChart>
                             </ResponsiveContainer>
@@ -493,7 +537,7 @@ const ProfitabilityDashboard: React.FC = () => {
                     {/* Utilisation des ressources */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                         <div className="bg-white p-6 rounded-xl shadow">
-                            <h2 className="text-xl font-bold mb-4">Efficacité de l'Eau par Zone</h2>
+                            <h2 className="text-xl font-bold mb-4">Water Efficiency by Zone</h2>
                             <div className="grid grid-cols-1 gap-4">
                                 {waterEfficiencyData.map((zone) => (
                                     <div key={zone.name} className="border p-4 rounded-lg">
@@ -511,7 +555,7 @@ const ProfitabilityDashboard: React.FC = () => {
                                             ></div>
                                         </div>
                                         <div className="text-right mt-1 text-sm text-gray-500">
-                                            Efficacité: {(zone.efficiency * 100).toFixed(1)}%
+                                            Efficiency : {(zone.efficiency * 100).toFixed(1)}%
                                         </div>
                                     </div>
                                 ))}
@@ -519,11 +563,11 @@ const ProfitabilityDashboard: React.FC = () => {
                         </div>
 
                         <div className="bg-white p-6 rounded-xl shadow">
-                            <h2 className="text-xl font-bold mb-4">Utilisation des Ressources</h2>
+                            <h2 className="text-xl font-bold mb-4">Resource Usage</h2>
                             <div className="space-y-6">
                                 <div>
                                     <div className="flex justify-between mb-2">
-                                        <span className="font-medium">Consommation d'eau</span>
+                                        <span className="font-medium">Water Consumption</span>
                                         <span>{kpis.waterUsage.toLocaleString()} L</span>
                                     </div>
                                     <div className="w-full bg-gray-200 rounded-full h-2.5">
@@ -536,7 +580,7 @@ const ProfitabilityDashboard: React.FC = () => {
 
                                 <div>
                                     <div className="flex justify-between mb-2">
-                                        <span className="font-medium">Consommation d'énergie</span>
+                                        <span className="font-medium">Energy Consumption</span>
                                         <span>{kpis.energyUsage.toLocaleString()} kWh</span>
                                     </div>
                                     <div className="w-full bg-gray-200 rounded-full h-2.5">
@@ -551,14 +595,14 @@ const ProfitabilityDashboard: React.FC = () => {
                                     <div className="bg-blue-50 p-4 rounded-lg flex items-center">
                                         <Droplet size={24} className="text-blue-500 mr-3" />
                                         <div>
-                                            <p className="text-sm text-gray-500">Eau économisée</p>
+                                            <p className="text-sm text-gray-500">Water Saved</p>
                                             <p className="font-bold">1,250 L</p>
                                         </div>
                                     </div>
                                     <div className="bg-yellow-50 p-4 rounded-lg flex items-center">
                                         <Zap size={24} className="text-yellow-500 mr-3" />
                                         <div>
-                                            <p className="text-sm text-gray-500">Énergie économisée</p>
+                                            <p className="text-sm text-gray-500">Energy Saved</p>
                                             <p className="font-bold">320 kWh</p>
                                         </div>
                                     </div>
@@ -569,13 +613,14 @@ const ProfitabilityDashboard: React.FC = () => {
 
                     {/* ROI et analyse de rentabilité */}
                     <div className="bg-white p-6 rounded-xl shadow mb-8">
-                        <h2 className="text-xl font-bold mb-4">Analyse de Rentabilité</h2>
+                        <h2 className="text-xl font-bold mb-4">Profitability Analysis</h2>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div className="bg-gray-50 p-4 rounded-lg">
-                                <p className="text-sm text-gray-500 mb-1">ROI du système IoT</p>
-                                <p className="text-3xl font-bold text-blue-600">+42.3%</p>
-                                <p className="text-xs text-gray-500 mt-1">Retour sur investissement sur 1 an</p>
+                                <p className="text-sm text-gray-500 mb-1">IoT System ROI</p>
+                                <p className="text-3xl font-bold text-blue-600">+{kpis.roi.toFixed(1)}%</p>
+                                <p className="text-xs text-gray-500 mt-1">Return on Investment for the Period</p>
                             </div>
+                            {/*
                             <div className="bg-gray-50 p-4 rounded-lg">
                                 <p className="text-sm text-gray-500 mb-1">Coût par hectare</p>
                                 <p className="text-3xl font-bold text-red-600">1,280 €</p>
@@ -585,10 +630,10 @@ const ProfitabilityDashboard: React.FC = () => {
                                 <p className="text-sm text-gray-500 mb-1">Revenu par hectare</p>
                                 <p className="text-3xl font-bold text-green-600">1,850 €</p>
                                 <p className="text-xs text-gray-500 mt-1">Moyenne sur la période</p>
-                            </div>
+                            </div>  */}
                         </div>
 
-                        <div className="mt-6">
+                        {/* <div className="mt-6">
                             <h3 className="font-medium mb-2">Résumé de l'analyse</h3>
                             <p className="text-gray-600">
                                 L'analyse de rentabilité montre une marge bénéficiaire de <span className="font-semibold">{kpis.profitMargin.toFixed(1)}%</span>,
@@ -601,7 +646,7 @@ const ProfitabilityDashboard: React.FC = () => {
                             <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
                                 Télécharger le rapport complet
                             </button>
-                        </div>
+                        </div> */}
                     </div>
                 </>
             )}

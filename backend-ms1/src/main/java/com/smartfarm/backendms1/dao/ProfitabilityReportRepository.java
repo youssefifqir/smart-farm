@@ -9,7 +9,7 @@ import java.util.List;
 
 @Repository
 public interface ProfitabilityReportRepository extends JpaRepository<ProfitabilityReport, Long> {
-
+    boolean existsByDate(LocalDate date);
     // Trouver les rapports entre deux dates
     List<ProfitabilityReport> findByDateBetween(LocalDate startDate, LocalDate endDate);
 
