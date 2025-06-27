@@ -25,7 +25,7 @@ const EmployeeManagement: React.FC = () => {
   const itemsPerPage = 5;
 
   const fetchEmployees = async () => {
-    const res = await axios.get("http://localhost:8080/api/employes");
+    const res = await axios.get("http://localhost:8036/api/employes");
     setEmployees(res.data);
   };
 
@@ -46,9 +46,9 @@ const EmployeeManagement: React.FC = () => {
     };
 
     if (newEmployee.id) {
-      await axios.put(`http://localhost:8080/api/employes/${newEmployee.id}`, payload);
+      await axios.put(`http://localhost:8036/api/employes/${newEmployee.id}`, payload);
     } else {
-      await axios.post("http://localhost:8080/api/employes", payload);
+      await axios.post("http://localhost:8036/api/employes", payload);
     }
 
     setShowModal(false);
@@ -62,7 +62,7 @@ const EmployeeManagement: React.FC = () => {
   };
 
   const deleteEmployee = async (id: number) => {
-    await axios.delete(`http://localhost:8080/api/employes/${id}`);
+    await axios.delete(`http://localhost:8036/api/employes/${id}`);
     fetchEmployees();
   };
 

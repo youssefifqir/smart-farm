@@ -18,7 +18,7 @@ const ClientManagement: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
 
   const fetchClients = async () => {
-    const res = await axios.get<Client[]>("http://localhost:8080/api/v1/clients");
+    const res = await axios.get<Client[]>("http://localhost:8036/api/v1/clients");
     setClients(res.data);
   };
 
@@ -33,9 +33,9 @@ const ClientManagement: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newClient.id) {
-      await axios.put(`http://localhost:8080/api/v1/clients/${newClient.id}`, newClient);
+      await axios.put(`http://localhost:8036/api/v1/clients/${newClient.id}`, newClient);
     } else {
-      await axios.post("http://localhost:8080/api/v1/clients", newClient);
+      await axios.post("http://localhost:8036/api/v1/clients", newClient);
     }
     setShowModal(false);
     setNewClient({ id: 0, nom: "", adresse: "", telephone: "" });
@@ -43,7 +43,7 @@ const ClientManagement: React.FC = () => {
   };
 
   const deleteClient = async (id: number) => {
-    await axios.delete(`http://localhost:8080/api/v1/clients/${id}`);
+    await axios.delete(`http://localhost:8036/api/v1/clients/${id}`);
     fetchClients();
   };
 

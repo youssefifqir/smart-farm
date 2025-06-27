@@ -42,9 +42,9 @@ const PurchaseManagement: React.FC = () => {
   useEffect(() => {
     (async () => {
       const [pchs, prods, sups] = await Promise.all([
-        axios.get<Purchase[]>("http://localhost:8080/api/achats"),
-        axios.get<Product[]>("http://localhost:8080/api/v1/products"),
-        axios.get<Supplier[]>("http://localhost:8080/api/v1/suppliers"),
+        axios.get<Purchase[]>("http://localhost:8036/api/achats"),
+        axios.get<Product[]>("http://localhost:8036/api/v1/products"),
+        axios.get<Supplier[]>("http://localhost:8036/api/v1/suppliers"),
       ]);
       setPurchases(pchs.data);
       setProducts(prods.data);
@@ -77,13 +77,13 @@ const PurchaseManagement: React.FC = () => {
     };
 
     if (form.id) {
-      await axios.put(`http://localhost:8080/api/achats/id/${form.id}`, payload);
+      await axios.put(`http://localhost:8036/api/achats/id/${form.id}`, payload);
     } else {
-      await axios.post("http://localhost:8080/api/achats", payload);
+      await axios.post("http://localhost:8036/api/achats", payload);
     }
     setShowModal(false);
     resetForm();
-    const { data } = await axios.get<Purchase[]>("http://localhost:8080/api/achats");
+    const { data } = await axios.get<Purchase[]>("http://localhost:8036/api/achats");
     setPurchases(data);
   };
 
@@ -106,7 +106,7 @@ const PurchaseManagement: React.FC = () => {
 
   const handleDeleteConfirmed = async () => {
     if (deleteId !== null) {
-      await axios.delete(`http://localhost:8080/api/achats/id/${deleteId}`);
+      await axios.delete(`http://localhost:8036/api/achats/id/${deleteId}`);
       setPurchases(prev => prev.filter(p => p.id !== deleteId));
     }
     setConfirmOpen(false);

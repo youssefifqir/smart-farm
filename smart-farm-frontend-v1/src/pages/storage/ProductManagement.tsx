@@ -24,14 +24,14 @@ const ProductList: React.FC = () => {
 
   const fetchProducts = async () => {
     const response = await axios.get<Product[]>(
-      "http://localhost:8080/api/v1/products"
+      "http://localhost:8036/api/v1/products"
     );
     setProducts(response.data);
   };
 
   const fetchCategories = async () => {
     const response = await axios.get<Category[]>(
-      "http://localhost:8080/api/v1/categories"
+      "http://localhost:8036/api/v1/categories"
     );
     setCategories(response.data);
   };
@@ -53,11 +53,11 @@ const ProductList: React.FC = () => {
 
     if (newProduct.id) {
       await axios.put(
-        `http://localhost:8080/api/v1/products/${newProduct.id}`,
+        `http://localhost:8036/api/v1/products/${newProduct.id}`,
         payload
       );
     } else {
-      await axios.post("http://localhost:8080/api/v1/products", payload);
+      await axios.post("http://localhost:8036/api/v1/products", payload);
     }
 
     setShowModal(false);
@@ -66,7 +66,7 @@ const ProductList: React.FC = () => {
   };
 
   const deleteProduct = async (id: number) => {
-    await axios.delete(`http://localhost:8080/api/v1/products/${id}`);
+    await axios.delete(`http://localhost:8036/api/v1/products/${id}`);
     fetchProducts();
   };
 

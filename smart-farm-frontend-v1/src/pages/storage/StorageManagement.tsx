@@ -33,9 +33,9 @@ const StorageManagement = () => {
   /* ----- fetch analytics once ----- */
   useEffect(() => {
     Promise.all([
-      fetch('http://localhost:8080/api/achats/total').then(r => r.json()),
-      fetch('http://localhost:8080/api/ventes/total').then(r => r.json()),
-      fetch('http://localhost:8080/api/statistiques/ventes-achats-mensuels').then(r => r.json()),
+      fetch('http://localhost:8036/api/achats/total').then(r => r.json()),
+      fetch('http://localhost:8036/api/ventes/total').then(r => r.json()),
+      fetch('http://localhost:8036/api/statistiques/ventes-achats-mensuels').then(r => r.json()),
     ])
       .then(([totA, totV, rows]) => {
         setTotalPurchases(Number(totA));

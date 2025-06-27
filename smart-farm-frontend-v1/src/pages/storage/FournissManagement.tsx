@@ -18,7 +18,7 @@ const FournissManagement: React.FC = () => {
   const itemsPerPage = 9;
 
   const fetchSuppliers = async () => {
-    const res = await axios.get("http://localhost:8080/api/v1/suppliers");
+    const res = await axios.get("http://localhost:8036/api/v1/suppliers");
     setSuppliers(res.data);
   };
 
@@ -30,11 +30,11 @@ const FournissManagement: React.FC = () => {
     e.preventDefault();
     if (newSupplier.id) {
       await axios.put(
-        `http://localhost:8080/api/v1/suppliers/${newSupplier.id}`,
+        `http://localhost:8036/api/v1/suppliers/${newSupplier.id}`,
         newSupplier
       );
     } else {
-      await axios.post("http://localhost:8080/api/v1/suppliers", newSupplier);
+      await axios.post("http://localhost:8036/api/v1/suppliers", newSupplier);
     }
     setShowModal(false);
     fetchSuppliers();
@@ -42,7 +42,7 @@ const FournissManagement: React.FC = () => {
   };
 
   const deleteSupplier = async (id: number) => {
-    await axios.delete(`http://localhost:8080/api/v1/suppliers/${id}`);
+    await axios.delete(`http://localhost:8036/api/v1/suppliers/${id}`);
     fetchSuppliers();
   };
 

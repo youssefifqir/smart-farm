@@ -47,9 +47,9 @@ const SaleManagement: React.FC = () => {
   useEffect(() => {
     (async () => {
       const [vts, prods, cls] = await Promise.all([
-        axios.get<Vente[]>("http://localhost:8080/api/ventes"),
-        axios.get<Product[]>("http://localhost:8080/api/v1/products"),
-        axios.get<Client[]>("http://localhost:8080/api/v1/clients"),
+        axios.get<Vente[]>("http://localhost:8036/api/ventes"),
+        axios.get<Product[]>("http://localhost:8036/api/v1/products"),
+        axios.get<Client[]>("http://localhost:8036/api/v1/clients"),
       ]);
       setSales(vts.data);
       setProducts(prods.data);
@@ -76,13 +76,13 @@ const SaleManagement: React.FC = () => {
 
     try {
       if (form.id) {
-        await axios.put(`http://localhost:8080/api/ventes/${form.id}`, payload);
+        await axios.put(`http://localhost:8036/api/ventes/${form.id}`, payload);
       } else {
-        await axios.post("http://localhost:8080/api/ventes", payload);
+        await axios.post("http://localhost:8036/api/ventes", payload);
       }
       setShowModal(false);
       resetForm();
-      const { data } = await axios.get<Vente[]>("http://localhost:8080/api/ventes");
+      const { data } = await axios.get<Vente[]>("http://localhost:8036/api/ventes");
       setSales(data);
     } catch (error: any) {
       if (axios.isAxiosError(error) && error.response) {
@@ -115,7 +115,7 @@ const SaleManagement: React.FC = () => {
   const handleDeleteConfirmed = async () => {
     if (deleteId !== null) {
       try {
-        await axios.delete(`http://localhost:8080/api/ventes/${deleteId}`);
+        await axios.delete(`http://localhost:8036/api/ventes/${deleteId}`);
         setSales(prev => prev.filter(s => s.id !== deleteId));
       } catch (error) {
         // Optionnel: gérer erreur ici

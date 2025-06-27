@@ -16,7 +16,7 @@ const CategoryManagement: React.FC = () => {
   const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
 
   const fetchCategories = async () => {
-    const response = await axios.get<Category[]>("http://localhost:8080/api/v1/categories");
+    const response = await axios.get<Category[]>("http://localhost:8036/api/v1/categories");
     setCategories(response.data);
   };
 
@@ -31,11 +31,11 @@ const CategoryManagement: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isEditing && editingCategoryId !== null) {
-      await axios.put(`http://localhost:8080/api/v1/categories/${editingCategoryId}`, {
+      await axios.put(`http://localhost:8036/api/v1/categories/${editingCategoryId}`, {
         nom: newCategory.nom,
       });
     } else {
-      await axios.post("http://localhost:8080/api/v1/categories", {
+      await axios.post("http://localhost:8036/api/v1/categories", {
         nom: newCategory.nom,
       });
     }
@@ -47,7 +47,7 @@ const CategoryManagement: React.FC = () => {
   };
 
   const deleteCategory = async (id: number) => {
-    await axios.delete(`http://localhost:8080/api/v1/categories/${id}`);
+    await axios.delete(`http://localhost:8036/api/v1/categories/${id}`);
     fetchCategories();
   };
 
