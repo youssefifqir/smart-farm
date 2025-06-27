@@ -1,6 +1,5 @@
 package com.smartfarm.backendms1.rest.converter;
 
-
 import com.smartfarm.backendms1.bean.SensorData;
 import com.smartfarm.backendms1.rest.dto.SensorDataDto;
 import org.springframework.stereotype.Component;
@@ -20,6 +19,8 @@ public class SensorDataConverter {
             item.setHumidity(dto.getHumidity());
             item.setIsFire(dto.getIsFire());
             item.setIsRaining(dto.getIsRaining());
+            item.setSoilMoisture(dto.getSoilMoisture());
+            item.setWaterConsumption(dto.getWaterConsumption());
             item.setTimestamp(dto.getTimestamp() != null ? dto.getTimestamp() : java.time.LocalDateTime.now());
             return item;
         }
@@ -34,6 +35,8 @@ public class SensorDataConverter {
             dto.setHumidity(item.getHumidity());
             dto.setIsFire(item.getIsFire());
             dto.setIsRaining(item.getIsRaining());
+            dto.setSoilMoisture(item.getSoilMoisture());
+            dto.setWaterConsumption(item.getWaterConsumption());
             dto.setTimestamp(item.getTimestamp());
             return dto;
         }

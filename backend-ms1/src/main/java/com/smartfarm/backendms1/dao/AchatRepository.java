@@ -11,7 +11,8 @@ import java.util.List;
 
 @Repository
 public interface AchatRepository extends JpaRepository<Achat, Long> {
-
+    // Dans AchatRepository.java
+    List<Achat> findByDateAchatBefore(LocalDateTime dateTime);
 
     List<Achat> findByProduit(Product produit);
 

@@ -12,6 +12,8 @@ import RainSensors from './pages/RainSensors';
 import FireDetection from './pages/FireDetection';
 import Temperature from './pages/Temperature';
 import WaterSensors from './pages/WaterSensors';
+import Profitability from './pages/Profitability';
+
 import StorageManagement from './pages/storage/StorageManagement';
 import ProductManagement from './pages/storage/ProductManagement';
 import CategoryManagement from './pages/storage/CategoryManagement';
@@ -47,6 +49,7 @@ function App() {
           <Route path="/fire-detection" element={<FireDetection />} />
           <Route path="/temperature" element={<Temperature />} />
           <Route path="/water-sensors" element={<WaterSensors />} />
+          <Route path="/profitabilityDashboard" element={<Profitability />} />
         </Route>
       </Routes>
     </Router>

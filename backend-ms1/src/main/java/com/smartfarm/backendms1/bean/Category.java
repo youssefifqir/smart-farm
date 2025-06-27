@@ -18,5 +18,7 @@ public class Category {
 
     private String nom;
 
+    @Enumerated(EnumType.STRING)
+    private Zone zone;
 
 }

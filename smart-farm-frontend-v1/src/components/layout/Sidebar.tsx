@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Cloud, Droplets, Leaf, AlertCircle, Settings, CloudRain, Flame, Thermometer, Droplet as WaterDroplet, Archive } from 'lucide-react';
+import { LayoutDashboard, Cloud, Droplets, Leaf, AlertCircle, Settings, CloudRain, Flame, Thermometer, Droplet as WaterDroplet, Archive, TrendingUp } from 'lucide-react';
 import { ReactNode } from 'react';
 import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react'; 
@@ -99,6 +99,8 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
           <NavItem to="/water-management" icon={<Droplets size={20} />} label="Water Management" isOpen={isOpen} />
           <NavItem to="/plant-health" icon={<Leaf size={20} />} label="Plant Health" isOpen={isOpen} />
           <NavItem to="/disease-detection" icon={<AlertCircle size={20} />} label="Disease Detection" isOpen={isOpen} />
+          <NavItem to="/profitabilityDashboard" icon={<TrendingUp  size={20} />} label="Profitability" isOpen={isOpen} />
+
           <NavItem to="/settings" icon={<Settings size={20} />} label="Settings" isOpen={isOpen} />
         </div>
         

@@ -22,6 +22,9 @@ public class Product {
     @ManyToOne
     @JoinColumn()
     private Category category;
+    @Enumerated(EnumType.STRING)
+
+    private Zone zone;
 
 
 }

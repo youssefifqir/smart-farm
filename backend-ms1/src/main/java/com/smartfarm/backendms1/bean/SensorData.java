@@ -26,6 +26,10 @@ public class SensorData {
     private Double humidity;
     private Boolean isFire;
     private Boolean isRaining;
+    private Double waterConsumption;     // Capteur de débit d’eau
+    private Double soilMoisture;         // Capteur d’humidité du sol
+
+    private Double pressure;             // BMP180/BME280
 
     private LocalDateTime timestamp = LocalDateTime.now(); //lw9ita fin sauvgardina had les infos
 }

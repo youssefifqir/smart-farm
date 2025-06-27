@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/Iot_Projet.iml" filepath="$PROJECT_DIR$/.idea/Iot_Projet.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/smart-farm.iml" filepath="$PROJECT_DIR$/.idea/smart-farm.iml" />
     </modules>
   </component>
 </project>
