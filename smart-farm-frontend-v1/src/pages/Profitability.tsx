@@ -1,0 +1,658 @@
+import React, { useState, useEffect } from 'react';
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { TrendingUp, TrendingDown, Droplet, Zap, CreditCard, DollarSign, Percent, Clock, RefreshCw } from 'lucide-react';
+import {
+    profitabilityService,
+    MonthlyFinancial,
+    ResourceUsage,
+    CropProfitability,
+    WaterEfficiency
+} from '../services/api';
+
+const ProfitabilityDashboard: React.FC = () => {
+    // État pour stocker les données du backend
+    const [timeFrame, setTimeFrame] = useState<string>('monthly');
+    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
+
+    // États pour les différentes données
+    const [mergedData, setMergedData] = useState<any[]>([]);
+    const [resourceUsageData, setResourceUsageData] = useState<ResourceUsage[]>([]);
+    const [cropProfitabilityData, setCropProfitabilityData] = useState<CropProfitability[]>([]);
+    const [waterEfficiencyData, setWaterEfficiencyData] = useState<WaterEfficiency[]>([]);
+    const [kpis, setKpis] = useState({
+        totalRevenue: 0,
+        totalCost: 0,
+        totalProfit: 0,
+        profitMargin: 0,
+        revenueGrowth: 0,
+        costGrowth: 0,
+        profitGrowth: 0,
+        marginGrowth: 0,
+        waterUsage: 0,
+        energyUsage: 0,
+        roi: 0
+    });
+
+    // État pour suivre la date de dernière mise à jour
+    const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+
+    // Fonction pour obtenir les dates en fonction du timeFrame
+    const getDateRange = () => {
+        const now = new Date();
+        const endDate = now.toISOString().split('T')[0];
+        const startDate = new Date();
+
+        if (timeFrame === 'weekly') {
+            startDate.setDate(now.getDate() - 7);
+        } else if (timeFrame === 'monthly') {
+            startDate.setMonth(now.getMonth() - 1);
+        } else if (timeFrame === 'yearly') {
+            startDate.setFullYear(now.getFullYear() - 1);
+        }
+
+        return {
+            startDate: startDate.toISOString().split('T')[0],
+            endDate
+        };
+    };
+
+    // Fonction pour charger toutes les données
+    const loadAllData = async () => {
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const { startDate, endDate } = getDateRange();
+            const currentYear = new Date().getFullYear();
+
+            let financialData;
+
+            // Chargement des données financières selon le timeFrame
+            if (timeFrame === 'weekly') {
+                financialData = await profitabilityService.getWeeklyFinancialData();
+            } else if (timeFrame === 'monthly') {
+                financialData = await profitabilityService.getMonthlyFinancialData(currentYear);
+            } else if (timeFrame === 'yearly') {
+                financialData = await profitabilityService.getYearlyFinancialData();
+            }
+
+            if (financialData && Array.isArray(financialData)) {
+                setMergedData(
+                    financialData.map(item => ({
+                        name: item.name,          // nom de la période (jour, mois, année)
+                        revenus: item.revenue,    // clé pour le graphique de revenus
+                        couts: item.cost,         // clé pour le graphique de coûts
+                        profit: item.profit       // clé pour le graphique de profit
+                    }))
+                );
+            } else {
+                // Données de démonstration en cas d'absence de données
+                const demoData = generateDemoData(timeFrame);
+                setMergedData(demoData);
+            }
+
+            // Chargement des données d'utilisation des ressources
+            const resourceData = await profitabilityService.getResourceUsageData(startDate, endDate);
+            if (resourceData) {
+                setResourceUsageData(resourceData);
+            }
+
+
+
+            // Chargement des données de rentabilité par culture
+            const cropData = await profitabilityService.getCropProfitabilityData(startDate, endDate);
+            if (cropData) {
+                setCropProfitabilityData(cropData);
+            }
+
+            // Chargement des données d'efficacité d'eau
+            const waterData = await profitabilityService.getWaterEfficiencyData();
+            if (waterData) {
+                setWaterEfficiencyData(waterData);
+            }
+
+            // Chargement des KPIs du tableau de bord
+            const dashboardKpis = await profitabilityService.getDashboardKPIs(startDate, endDate);
+            if (dashboardKpis) {
+                setKpis({
+                    totalRevenue: dashboardKpis.totalRevenue || 0,
+                    totalCost: dashboardKpis.totalCost || 0,
+                    totalProfit: dashboardKpis.totalProfit || 0,
+                    profitMargin: dashboardKpis.profitMargin || 0,
+                    revenueGrowth: dashboardKpis.revenueGrowth || 0,
+                    costGrowth: dashboardKpis.costGrowth || 0,
+                    profitGrowth: dashboardKpis.profitGrowth || 0,
+                    marginGrowth: dashboardKpis.marginGrowth || 0,
+                    waterUsage: dashboardKpis.waterUsage || 0,
+                    energyUsage: dashboardKpis.energyUsage || 0,
+                    roi: 0
+                });
+            }
+            // Chargement du ROI
+            const roiData = await profitabilityService.calculateROI(startDate, endDate);
+            if (roiData !== undefined && roiData !== null) {
+                setKpis(prevKpis => ({
+                    ...prevKpis,
+                    roi: roiData
+                }));
+            }
+            // Mettre à jour la date de dernière mise à jour des données
+            setLastUpdated(new Date());
+        } catch (err) {
+            console.error("Erreur lors du chargement des données", err);
+            setError("Impossible de charger les données. Veuillez réessayer plus tard.");
+
+            // Générer des données de démonstration en cas d'erreur
+            const demoData = generateDemoData(timeFrame);
+            setMergedData(demoData);
+
+            setResourceUsageData([
+                { name: 'Eau', value: 2500, color: '#3b82f6' },
+                { name: 'Électricité', value: 1800, color: '#eab308' },
+                { name: 'Main d\'œuvre', value: 3000, color: '#ef4444' },
+                { name: 'Engrais', value: 1200, color: '#22c55e' },
+                { name: 'Autres', value: 800, color: '#a855f7' },
+            ]);
+
+            setCropProfitabilityData([
+                { name: 'Tomates', revenue: 5200, cost: 3100, profit: 2100 },
+                { name: 'Laitue', revenue: 3800, cost: 2200, profit: 1600 },
+                { name: 'Concombres', revenue: 4500, cost: 2800, profit: 1700 },
+                { name: 'Poivrons', revenue: 6200, cost: 4100, profit: 2100 },
+            ]);
+
+            setWaterEfficiencyData([
+                { name: 'Zone A', efficiency: 0.85, usage: 1200 },
+                { name: 'Zone B', efficiency: 0.72, usage: 1800 },
+                { name: 'Zone C', efficiency: 0.91, usage: 950 },
+                { name: 'Zone D', efficiency: 0.78, usage: 1500 },
+            ]);
+
+            setKpis({
+                totalRevenue: 33000,
+                totalCost: 26600,
+                totalProfit: 6400,
+                profitMargin: 19.4,
+                revenueGrowth: 12,
+                costGrowth: 8,
+                profitGrowth: 15,
+                marginGrowth: 2.5,
+                waterUsage: 6450,
+                energyUsage: 1800,
+                roi: 0
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Fonction pour générer des données de démonstration selon le timeFrame
+    const generateDemoData = (timeFrame) => {
+        if (timeFrame === 'weekly') {
+            // Données pour les 7 derniers jours de la semaine
+            return [
+                { name: 'Lundi', revenus: 800, couts: 600, profit: 200 },
+                { name: 'Mardi', revenus: 850, couts: 620, profit: 230 },
+                { name: 'Mercredi', revenus: 920, couts: 680, profit: 240 },
+                { name: 'Jeudi', revenus: 880, couts: 650, profit: 230 },
+                { name: 'Vendredi', revenus: 950, couts: 680, profit: 270 },
+                { name: 'Samedi', revenus: 1000, couts: 720, profit: 280 },
+                { name: 'Dimanche', revenus: 780, couts: 580, profit: 200 }
+            ];
+        } else if (timeFrame === 'monthly') {
+            // Données mensuelles pour l'année en cours
+            return [
+                { name: 'Jan', revenus: 4000, couts: 3000, profit: 1000 },
+                { name: 'Fév', revenus: 3000, couts: 2700, profit: 300 },
+                { name: 'Mar', revenus: 5000, couts: 4200, profit: 800 },
+                { name: 'Avr', revenus: 7000, couts: 5500, profit: 1500 },
+                { name: 'Mai', revenus: 6000, couts: 5200, profit: 800 },
+                { name: 'Jun', revenus: 8000, couts: 6000, profit: 2000 },
+                { name: 'Jul', revenus: 7800, couts: 5900, profit: 1900 },
+                { name: 'Aoû', revenus: 9000, couts: 6800, profit: 2200 },
+                { name: 'Sep', revenus: 8500, couts: 6400, profit: 2100 },
+                { name: 'Oct', revenus: 7200, couts: 5600, profit: 1600 },
+                { name: 'Nov', revenus: 8800, couts: 6600, profit: 2200 },
+                { name: 'Déc', revenus: 9500, couts: 7000, profit: 2500 }
+            ];
+        } else if (timeFrame === 'yearly') {
+            // Données annuelles sur 5 ans
+            return [
+                { name: '2021', revenus: 48000, couts: 40000, profit: 8000 },
+                { name: '2022', revenus: 52000, couts: 43000, profit: 9000 },
+                { name: '2023', revenus: 58000, couts: 47000, profit: 11000 },
+                { name: '2024', revenus: 65000, couts: 52000, profit: 13000 },
+                { name: '2025', revenus: 72000, couts: 57000, profit: 15000 }
+            ];
+        }
+        // Par défaut, retourner des données mensuelles
+        return [
+            { name: 'Jan', revenus: 4000, couts: 3000, profit: 1000 },
+            { name: 'Fév', revenus: 3000, couts: 2700, profit: 300 },
+            { name: 'Mar', revenus: 5000, couts: 4200, profit: 800 },
+            { name: 'Avr', revenus: 7000, couts: 5500, profit: 1500 },
+            { name: 'Mai', revenus: 6000, couts: 5200, profit: 800 },
+            { name: 'Jun', revenus: 8000, couts: 6000, profit: 2000 }
+        ];
+    };
+
+    // Fonction pour générer un rapport (quotidien ou mensuel)
+    // Fonction pour générer un rapport (quotidien ou mensuel) - VERSION MISE À JOUR
+    const generateReport = async (type: 'daily' | 'monthly') => {
+        try {
+            setIsLoading(true);
+            setError(null);
+            const today = new Date();
+
+            if (type === 'daily') {
+                // Générer un rapport PDF quotidien pour aujourd'hui
+                const dateStr = today.toISOString().split('T')[0]; // Format YYYY-MM-DD
+
+                // Appeler la nouvelle fonction pour générer et télécharger le PDF
+                const result = await profitabilityService.generateDailyPdfReport(dateStr);
+
+                if (result.success) {
+                    // Optionnel : afficher un message de succès
+                    console.log(`Rapport PDF quotidien généré avec succès : ${result.fileName}`);
+
+                    // Vous pouvez ajouter une notification de succès ici si vous avez un système de notifications
+                    // Par exemple : showNotification('Rapport PDF généré avec succès', 'success');
+                }
+            } else {
+                // Générer un rapport mensuel (garde la logique existante)
+                const year = today.getFullYear();
+                const month = today.getMonth() + 1; // getMonth() retourne 0-11
+                await profitabilityService.generateMonthlyPdfReport(year, month);
+
+                // Recharger les données après la génération du rapport mensuel
+                await loadAllData();
+            }
+
+        } catch (err) {
+            console.error(`Erreur lors de la génération du rapport ${type}:`, err);
+
+            let errorMessage = `Impossible de générer le rapport ${type === 'daily' ? 'quotidien' : 'mensuel'}.`;
+
+            // Gestion d'erreurs plus spécifique pour le PDF
+            if (type === 'daily') {
+                if (err instanceof Error) {
+                    if (err.message.includes('Network Error')) {
+                        errorMessage += ' Vérifiez votre connexion réseau.';
+                    } else if (err.message.includes('500')) {
+                        errorMessage += ' Erreur serveur lors de la génération du PDF.';
+                    } else if (err.message.includes('404')) {
+                        errorMessage += ' Service PDF non disponible.';
+                    } else {
+                        errorMessage += ' Veuillez réessayer plus tard.';
+                    }
+                }
+            } else {
+                errorMessage += ' Veuillez réessayer plus tard.';
+            }
+
+            setError(errorMessage);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Obtenir un titre adapté pour les graphiques selon le timeFrame
+    const getChartTitle = (baseTitle) => {
+        if (timeFrame === 'weekly') {
+            return `${baseTitle} (Hebdomadaire)`;
+        } else if (timeFrame === 'monthly') {
+            return `${baseTitle} (Mensuel)`;
+        } else if (timeFrame === 'yearly') {
+            return `${baseTitle} (Annuel)`;
+        }
+        return baseTitle;
+    };
+
+    // Charger les données au chargement initial et lors du changement de timeFrame
+    useEffect(() => {
+        loadAllData();
+    }, [timeFrame]);
+
+    // Format pour la date de dernière mise à jour
+    const formatLastUpdated = () => {
+        return `${lastUpdated.toLocaleDateString()} à ${lastUpdated.toLocaleTimeString()}`;
+    };
+
+    return (
+        <div className="bg-gray-50 min-h-screen p-6">
+            <header className="mb-8">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-800">Profitability Dashboard</h1>
+                        <p className="text-gray-600">Analysis of the Economic Performance of Your Smart Farm</p>
+                    </div>
+                    <div className="flex space-x-4">
+                        <button
+                            className="px-4 py-2 bg-green-500 text-white rounded-lg flex items-center shadow hover:bg-green-600 transition"
+                            onClick={() => generateReport('daily')}
+                            disabled={isLoading}
+                        >
+                            <Clock size={18} className="mr-2" />
+                            Generate Daily Report
+                        </button>
+                        <button
+                            className="px-4 py-2 bg-blue-500 text-white rounded-lg flex items-center shadow hover:bg-blue-600 transition"
+                            onClick={() => generateReport('monthly')}
+                            disabled={isLoading}
+                        >
+                            <Clock size={18} className="mr-2" />
+                            Generate Monthly Report
+                        </button>
+                    </div>
+                </div>
+
+                <div className="mt-4 flex justify-between items-center">
+                    <div className="flex space-x-4">
+                        <button
+                            className={`px-4 py-2 rounded-lg ${timeFrame === 'weekly' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                            onClick={() => setTimeFrame('weekly')}
+                        >
+                            Weekly
+                        </button>
+                        <button
+                            className={`px-4 py-2 rounded-lg ${timeFrame === 'monthly' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                            onClick={() => setTimeFrame('monthly')}
+                        >
+                            Monthly
+                        </button>
+                        <button
+                            className={`px-4 py-2 rounded-lg ${timeFrame === 'yearly' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                            onClick={() => setTimeFrame('yearly')}
+                        >
+                            Yearly
+                        </button>
+                    </div>
+                    <div className="flex items-center text-sm text-gray-500">
+                        <span className="mr-2">Last Update: {formatLastUpdated()}</span>
+                        <button
+                            onClick={loadAllData}
+                            className="p-1 rounded-full hover:bg-gray-200 transition"
+                            disabled={isLoading}
+                        >
+                            <RefreshCw size={16} className={`${isLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            {isLoading ? (
+                <div className="flex justify-center items-center h-64">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                </div>
+            ) : error ? (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                    <strong className="font-bold">Error ! </strong>
+                    <span className="block sm:inline">{error}</span>
+                </div>
+            ) : (
+                <>
+                    {/* Indicateurs KPI */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div className="bg-white p-6 rounded-xl shadow">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-500">Total Revenue</p>
+                                    <p className="text-2xl font-bold">{kpis.totalRevenue.toLocaleString()} €</p>
+                                </div>
+                                <div className="bg-green-100 p-3 rounded-full">
+                                    <DollarSign size={24} className="text-green-600" />
+                                </div>
+                            </div>
+                            <div className="mt-4 flex items-center text-sm text-green-600">
+                                <TrendingUp size={16} />
+                                <span className="ml-1">+{kpis.revenueGrowth}% Compared to the previous period</span>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-6 rounded-xl shadow">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-500">Operating Costs</p>
+                                    <p className="text-2xl font-bold">{kpis.totalCost.toLocaleString()} €</p>
+                                </div>
+                                <div className="bg-red-100 p-3 rounded-full">
+                                    <CreditCard size={24} className="text-red-600" />
+                                </div>
+                            </div>
+                            <div className="mt-4 flex items-center text-sm text-red-600">
+                                <TrendingUp size={16} />
+                                <span className="ml-1">+{kpis.costGrowth}% Compared to the previous period</span>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-6 rounded-xl shadow">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-500">Profit</p>
+                                    <p className="text-2xl font-bold">{kpis.totalProfit.toLocaleString()} €</p>
+                                </div>
+                                <div className="bg-blue-100 p-3 rounded-full">
+                                    <TrendingUp size={24} className="text-blue-600" />
+                                </div>
+                            </div>
+                            <div className="mt-4 flex items-center text-sm text-green-600">
+                                <TrendingUp size={16} />
+                                <span className="ml-1">+{kpis.profitGrowth}% Compared to the previous period</span>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-6 rounded-xl shadow">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-500">Profit Margin</p>
+                                    <p className="text-2xl font-bold">{kpis.profitMargin.toFixed(1)}%</p>
+                                </div>
+                                <div className="bg-purple-100 p-3 rounded-full">
+                                    <Percent size={24} className="text-purple-600" />
+                                </div>
+                            </div>
+                            <div className="mt-4 flex items-center text-sm text-green-600">
+                                <TrendingUp size={16} />
+                                <span className="ml-1">+{kpis.marginGrowth}% Compared to the previous period</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Graphiques de revenus et coûts */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <div className="bg-white p-6 rounded-xl shadow">
+                            <h2 className="text-xl font-bold mb-4">{getChartTitle("Revenue vs Costs")}</h2>
+                            <ResponsiveContainer width="100%" height={300}>
+                                <LineChart data={mergedData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="name" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Legend />
+                                    <Line type="monotone"  dataKey="revenus" name="Revenus" stroke="#22c55e" strokeWidth={2} />
+                                    <Line type="monotone"  dataKey="couts" name="Costs" stroke="#ef4444" strokeWidth={2} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+
+                        <div className="bg-white p-6 rounded-xl shadow">
+                            <h2 className="text-xl font-bold mb-4">{getChartTitle("Profit")}</h2>
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={mergedData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="name" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Legend />
+                                    <Bar dataKey="profit" name="Profit" fill="#3b82f6" />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    {/* Répartition des coûts et rentabilité par culture */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <div className="bg-white p-6 rounded-xl shadow">
+                            <h2 className="text-xl font-bold mb-4">Cost Distribution</h2>
+                            <ResponsiveContainer width="100%" height={300}>
+                                <PieChart>
+                                    <Pie
+                                        data={resourceUsageData}
+                                        cx="50%"
+                                        cy="50%"
+                                        labelLine={false}
+                                        outerRadius={100}
+                                        fill="#8884d8"
+                                        dataKey="value"
+                                        nameKey="name"
+                                        label={({name, percent}) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                                    >
+                                        {resourceUsageData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip />
+                                    <Legend />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+
+                        <div className="bg-white p-6 rounded-xl shadow">
+                            <h2 className="text-xl font-bold mb-4">Profitability by Crop</h2>
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={cropProfitabilityData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="name" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Legend />
+                                    <Bar dataKey="revenue" name="Revenus" fill="#22c55e" />
+                                    <Bar dataKey="cost" name="cost" fill="#ef4444" />
+                                    <Bar dataKey="profit" name="Profit" fill="#3b82f6" />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    {/* Utilisation des ressources */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <div className="bg-white p-6 rounded-xl shadow">
+                            <h2 className="text-xl font-bold mb-4">Water Efficiency by Zone</h2>
+                            <div className="grid grid-cols-1 gap-4">
+                                {waterEfficiencyData.map((zone) => (
+                                    <div key={zone.name} className="border p-4 rounded-lg">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="font-medium">{zone.name}</span>
+                                            <div className="flex items-center">
+                                                <Droplet size={16} className="text-blue-500 mr-1" />
+                                                <span>{zone.usage} L</span>
+                                            </div>
+                                        </div>
+                                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                            <div
+                                                className="bg-blue-600 h-2.5 rounded-full"
+                                                style={{ width: `${zone.efficiency * 100}%` }}
+                                            ></div>
+                                        </div>
+                                        <div className="text-right mt-1 text-sm text-gray-500">
+                                            Efficiency : {(zone.efficiency * 100).toFixed(1)}%
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-6 rounded-xl shadow">
+                            <h2 className="text-xl font-bold mb-4">Resource Usage</h2>
+                            <div className="space-y-6">
+                                <div>
+                                    <div className="flex justify-between mb-2">
+                                        <span className="font-medium">Water Consumption</span>
+                                        <span>{kpis.waterUsage.toLocaleString()} L</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                        <div
+                                            className="bg-blue-600 h-2.5 rounded-full"
+                                            style={{ width: `${(kpis.waterUsage / 10000) * 100}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div className="flex justify-between mb-2">
+                                        <span className="font-medium">Energy Consumption</span>
+                                        <span>{kpis.energyUsage.toLocaleString()} kWh</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                        <div
+                                            className="bg-yellow-500 h-2.5 rounded-full"
+                                            style={{ width: `${(kpis.energyUsage / 3000) * 100}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 mt-4">
+                                    <div className="bg-blue-50 p-4 rounded-lg flex items-center">
+                                        <Droplet size={24} className="text-blue-500 mr-3" />
+                                        <div>
+                                            <p className="text-sm text-gray-500">Water Saved</p>
+                                            <p className="font-bold">1,250 L</p>
+                                        </div>
+                                    </div>
+                                    <div className="bg-yellow-50 p-4 rounded-lg flex items-center">
+                                        <Zap size={24} className="text-yellow-500 mr-3" />
+                                        <div>
+                                            <p className="text-sm text-gray-500">Energy Saved</p>
+                                            <p className="font-bold">320 kWh</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ROI et analyse de rentabilité */}
+                    <div className="bg-white p-6 rounded-xl shadow mb-8">
+                        <h2 className="text-xl font-bold mb-4">Profitability Analysis</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                                <p className="text-sm text-gray-500 mb-1">IoT System ROI</p>
+                                <p className="text-3xl font-bold text-blue-600">+{kpis.roi.toFixed(1)}%</p>
+                                <p className="text-xs text-gray-500 mt-1">Return on Investment for the Period</p>
+                            </div>
+                            {/*
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                                <p className="text-sm text-gray-500 mb-1">Coût par hectare</p>
+                                <p className="text-3xl font-bold text-red-600">1,280 €</p>
+                                <p className="text-xs text-gray-500 mt-1">Moyenne sur la période</p>
+                            </div>
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                                <p className="text-sm text-gray-500 mb-1">Revenu par hectare</p>
+                                <p className="text-3xl font-bold text-green-600">1,850 €</p>
+                                <p className="text-xs text-gray-500 mt-1">Moyenne sur la période</p>
+                            </div>  */}
+                        </div>
+
+                        {/* <div className="mt-6">
+                            <h3 className="font-medium mb-2">Résumé de l'analyse</h3>
+                            <p className="text-gray-600">
+                                L'analyse de rentabilité montre une marge bénéficiaire de <span className="font-semibold">{kpis.profitMargin.toFixed(1)}%</span>,
+                                avec une croissance du profit de <span className="font-semibold">{kpis.profitGrowth}%</span> par rapport à la période précédente.
+                                Les investissements dans les technologies IoT ont permis de réduire les coûts opérationnels et d'optimiser l'utilisation des ressources.
+                            </p>
+                        </div>
+
+                        <div className="mt-6 flex justify-end">
+                            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                                Télécharger le rapport complet
+                            </button>
+                        </div> */}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+};
+
+export default ProfitabilityDashboard;
