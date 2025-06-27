@@ -37,18 +37,34 @@ public class AchatServiceImpl implements AchatService {
     @Override
     @Transactional
     public AchatDto save(AchatDto dto) {
-        // Récupérer le produit
+        // 1. Récupérer le produit existant par son ID
         Long produitId = dto.getProduit().getId();
         Product produit = productRepository.findById(produitId)
                 .orElseThrow(() -> new RuntimeException("Produit avec ID " + produitId + " introuvable"));
 
-        // Mettre à jour la quantité du produit
+        // 2. Récupérer le fournisseur existant par son ID
+        Long fournisseurId = dto.getFournisseur().getId();
+        Supplier fournisseur = supplierRepository.findById(fournisseurId)
+                .orElseThrow(() -> new RuntimeException("Fournisseur avec ID " + fournisseurId + " introuvable"));
+
+        // 3. Mettre à jour la quantité du produit
         produit.setQuantite(produit.getQuantite() + dto.getQuantite());
         productRepository.save(produit);
 
-        // Enregistrer l'achat
-        return converter.toDto(repo.save(converter.toEntity(dto)));
+        // 4. Créer un nouvel achat avec les entités existantes
+        Achat achat = new Achat();
+        achat.setQuantite(dto.getQuantite());
+        achat.setPrixTotal(dto.getPrixTotal());
+        achat.setDateAchat(dto.getDateAchat());
+        achat.setProduit(produit);         // 🔁 lien vers produit existant
+        achat.setFournisseur(fournisseur); // 🔁 lien vers fournisseur existant
+
+        // 5. Enregistrer et retourner l'achat
+        Achat saved = repo.save(achat);
+        return converter.toDto(saved);
     }
+
+
 
 
     @Override
