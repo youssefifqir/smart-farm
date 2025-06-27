@@ -477,8 +477,29 @@ export const sensorService = {
             console.error('Backend connection test failed:', error);
             throw error;
         }
+    },
+    toggleSensorStatus: async (name: string, status: boolean): Promise<void> => {
+    try {
+      await fetch(`http://localhost:8036/api/v1/sensors/status?name=${name}&status=${status}`, {
+        method: 'PUT'
+      });
+      alert(`✅ ${name} est maintenant ${status ? 'activé' : 'désactivé'}`);
+    } catch (err) {
+      alert(`❌ Erreur : ${err}`);
     }
+  }
 };
+export const toggleSensor = async (sensor: string, enabled: boolean) => {
+  try {
+    await fetch(`/api/sensors/${sensor}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled }),
+    });
+  } catch (error) {
+    console.error(`Failed to update ${sensor} sensor`, error);
+  }
+}
 
 // ============ SERVICES DE PRÉDICTIONS ============
 

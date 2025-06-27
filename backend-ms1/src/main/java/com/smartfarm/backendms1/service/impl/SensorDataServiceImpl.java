@@ -30,5 +30,4 @@ public class SensorDataServiceImpl implements SensorDataService {
     public List<SensorData> getAllSensorData() {
         return sensorRepository.findAll();
     }
-
-}
+    }

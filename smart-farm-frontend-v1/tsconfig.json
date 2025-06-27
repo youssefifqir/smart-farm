@@ -4,9 +4,16 @@
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
   ],
+  "compilerOptions": {
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  },
   "include": [
     "src/**/*",           // Assure-toi que ton dossier source est inclus
     "node_modules/axios/index.d.cts", // Assure-toi que le module axios est inclus
     "node_modules/@types" // Pour inclure les types d'axios si nécessaire
   ]
 }
+

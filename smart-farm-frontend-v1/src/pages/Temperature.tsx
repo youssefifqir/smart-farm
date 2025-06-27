@@ -1,9 +1,29 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Thermometer } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
+type Sensor = {
+  name: string;
+  location: string;
+  type: string;
+  isActive: boolean;
+  // Add other properties as needed
+};
+
+// Type guard to check if an object is a Sensor
+function isSensor(obj: unknown): obj is Sensor {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'type' in obj &&
+    (obj as { type: string }).type === 'climate'
+  );
+}
+
 const Temperature = () => {
-  const [activeTab, setActiveTab] = useState('temperature history');
+  const [activeTab, setActiveTab] = useState('sensor status');
+  
+  const [sensors, setSensors] = useState<Sensor[]>([]);
 
   const temperatureData = [
     { time: '00:00', temp: 18 },
@@ -13,6 +33,34 @@ const Temperature = () => {
     { time: '16:00', temp: 28 },
     { time: '20:00', temp: 22 }
   ];
+
+  useEffect(() => {
+    fetch('http://localhost:8036/api/v1/sensors/')
+      .then(res => res.json())
+      .then(data =>
+        setSensors(
+          data.filter(isSensor)
+        )
+      );
+  }, []);
+
+  const toggleSensor = async (name: string, status: boolean) => {
+    try {
+      const res = await fetch(
+        `http://localhost:8036/api/v1/sensors/status?name=${name}&status=${status}`,
+        { method: 'PUT' }
+      );
+      if (res.ok) {
+        setSensors((prev) =>
+          prev.map((s) =>
+            s.name === name ? { ...s, isActive: status } : s
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Erreur de mise à jour capteur', error);
+    }
+  };
 
   const renderStatusCard = (title: string, value: string, subtitle: string) => (
     <div className="bg-white p-6 rounded-lg border border-gray-100">
@@ -54,21 +102,31 @@ const Temperature = () => {
     <div className="bg-white p-6 rounded-lg border border-gray-100">
       <h3 className="text-lg font-semibold mb-4">Temperature Sensors</h3>
       <div className="space-y-4">
-        {[
-          { name: 'Temperature Sensor A', location: 'Greenhouse', value: '26°C', status: 'Active' },
-          { name: 'Temperature Sensor B', location: 'Storage Area', value: '22°C', status: 'Active' },
-          { name: 'Temperature Sensor C', location: 'Field Zone 1', value: '24°C', status: 'Active' },
-          { name: 'Temperature Sensor D', location: 'Field Zone 2', value: '23°C', status: 'Active' }
-        ].map((sensor, index) => (
+        {sensors.map((sensor, index) => (
           <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
             <div>
               <h4 className="font-medium">{sensor.name}</h4>
               <p className="text-sm text-gray-500">{sensor.location}</p>
-              <p className="text-sm font-medium text-gray-700">{sensor.value}</p>
             </div>
-            <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-              {sensor.status}
-            </span>
+            <div className="flex items-center space-x-4">
+              <span
+                className={`px-2 py-1 text-xs font-medium rounded-full ${
+                  sensor.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                {sensor.isActive ? 'Active' : 'Inactive'}
+              </span>
+              <button
+                onClick={() => toggleSensor(sensor.name, !sensor.isActive)}
+                className={`px-3 py-1 text-sm rounded-md ${
+                  sensor.isActive
+                    ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                    : 'bg-green-100 text-green-600 hover:bg-green-200'
+                }`}
+              >
+                {sensor.isActive ? 'Désactiver' : 'Activer'}
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -116,21 +174,9 @@ const Temperature = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {renderStatusCard(
-          'Current Temperature',
-          '24°C',
-          '+2° from yesterday'
-        )}
-        {renderStatusCard(
-          'Daily High',
-          '28°C',
-          'Recorded at 2:30 PM'
-        )}
-        {renderStatusCard(
-          'Daily Low',
-          '16°C',
-          'Recorded at 5:15 AM'
-        )}
+        {renderStatusCard('Current Temperature', '24°C', '+2° from yesterday')}
+        {renderStatusCard('Daily High', '28°C', 'Recorded at 2:30 PM')}
+        {renderStatusCard('Daily Low', '16°C', 'Recorded at 5:15 AM')}
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-100">

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { 
+import { useEffect, useState } from 'react';
+import {
   Monitor,
   Bell,
   User,
@@ -10,10 +10,15 @@ import {
   CloudRain,
   Flame,
   Thermometer,
-  Droplet
+  Droplet,
 } from 'lucide-react';
 
 const Settings = () => {
+  const [rainEnabled, setRainEnabled] = useState(false);
+  const [fireEnabled, setFireEnabled] = useState(false);
+  const [temperatureEnabled, setTemperatureEnabled] = useState(false);
+  const [waterEnabled, setWaterEnabled] = useState(false);
+
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [alertNotifications, setAlertNotifications] = useState(true);
   const [smsNotifications, setSmsNotifications] = useState(false);
@@ -21,11 +26,65 @@ const Settings = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
 
-  const Toggle = ({ enabled, setEnabled }: { enabled: boolean; setEnabled: (value: boolean) => void }) => (
+  // 🔁 Charger état initial depuis la base (backend)
+  useEffect(() => {
+    type Sensor = {
+      name: string;
+      isActive: boolean;
+      // add other properties if needed
+    };
+
+    fetch('http://localhost:8036/api/v1/sensors/')
+      .then((res) => res.json())
+      .then((sensors: Sensor[]) => {
+        sensors.forEach((sensor: Sensor) => {
+          switch (sensor.name) {
+            case 'rain':
+              setRainEnabled(sensor.isActive);
+              break;
+            case 'fire':
+              setFireEnabled(sensor.isActive);
+              break;
+            case 'temperature':
+              setTemperatureEnabled(sensor.isActive);
+              break;
+            case 'water':
+              setWaterEnabled(sensor.isActive);
+              break;
+            default:
+              break;
+          }
+        });
+      });
+  }, []);
+
+  // ✅ Met à jour le capteur côté backend
+  const toggleSensor = async (sensorName: string, enabled: boolean) => {
+    try {
+      const res = await fetch(
+        `http://localhost:8036/api/v1/sensors/status?name=${sensorName}&status=${enabled}`,
+        {
+          method: 'PUT',
+        }
+      );
+      if (!res.ok) throw new Error(`Erreur pour ${sensorName}`);
+    } catch (err) {
+      console.error('Erreur de mise à jour capteur :', err);
+    }
+  };
+
+  // ✅ Toggle component
+  const Toggle = ({
+    enabled,
+    onToggle,
+  }: {
+    enabled: boolean;
+    onToggle: () => void;
+  }) => (
     <button
-      onClick={() => setEnabled(!enabled)}
+      onClick={onToggle}
       className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out ${
-        enabled ? 'bg-green-500' : 'bg-gray-200'
+        enabled ? 'bg-green-500' : 'bg-gray-300'
       }`}
     >
       <span
@@ -44,32 +103,79 @@ const Settings = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-100 divide-y">
-        {/* Sensors Section */}
+
+        {/* ✅ Sensors Section */}
         <div className="p-6">
           <div className="flex items-center mb-4">
             <Monitor className="mr-2 text-gray-400" />
             <h2 className="text-lg font-semibold">Sensors</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center p-3 rounded-lg hover:bg-gray-50">
-              <CloudRain className="mr-3 text-blue-500" />
-              <span>Rain Sensors</span>
+          <div className="space-y-4">
+            {/* Rain Sensor */}
+            <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50">
+              <div className="flex items-center">
+                <CloudRain className="mr-3 text-blue-500" />
+                <span>Rain Sensor</span>
+              </div>
+              <Toggle
+                enabled={rainEnabled}
+                onToggle={() => {
+                  const newVal = !rainEnabled;
+                  setRainEnabled(newVal);
+                  toggleSensor('rain', newVal);
+                }}
+              />
             </div>
-            <div className="flex items-center p-3 rounded-lg hover:bg-gray-50">
-              <Flame className="mr-3 text-red-500" />
-              <span>Fire Detection</span>
+
+            {/* Fire Sensor */}
+            <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50">
+              <div className="flex items-center">
+                <Flame className="mr-3 text-red-500" />
+                <span>Fire Detection</span>
+              </div>
+              <Toggle
+                enabled={fireEnabled}
+                onToggle={() => {
+                  const newVal = !fireEnabled;
+                  setFireEnabled(newVal);
+                  toggleSensor('fire', newVal);
+                }}
+              />
             </div>
-            <div className="flex items-center p-3 rounded-lg hover:bg-gray-50">
-              <Thermometer className="mr-3 text-orange-500" />
-              <span>Temperature</span>
+
+            {/* Temperature Sensor */}
+            <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50">
+              <div className="flex items-center">
+                <Thermometer className="mr-3 text-orange-500" />
+                <span>Temperature</span>
+              </div>
+              <Toggle
+                enabled={temperatureEnabled}
+                onToggle={() => {
+                  const newVal = !temperatureEnabled;
+                  setTemperatureEnabled(newVal);
+                  toggleSensor('temperature', newVal);
+                }}
+              />
             </div>
-            <div className="flex items-center p-3 rounded-lg hover:bg-gray-50">
-              <Droplet className="mr-3 text-blue-400" />
-              <span>Water Sensors</span>
+
+            {/* Water Sensor */}
+            <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50">
+              <div className="flex items-center">
+                <Droplet className="mr-3 text-blue-400" />
+                <span>Water Sensor</span>
+              </div>
+              <Toggle
+                enabled={waterEnabled}
+                onToggle={() => {
+                  const newVal = !waterEnabled;
+                  setWaterEnabled(newVal);
+                  toggleSensor('water', newVal);
+                }}
+              />
             </div>
           </div>
         </div>
-
         {/* Notifications Section */}
         <div className="p-6">
           <div className="flex items-center mb-4">
@@ -79,15 +185,15 @@ const Settings = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span>Alert notifications</span>
-              <Toggle enabled={alertNotifications} setEnabled={setAlertNotifications} />
+              <Toggle enabled={alertNotifications} onToggle={() => setAlertNotifications((prev) => !prev)} />
             </div>
             <div className="flex items-center justify-between">
               <span>Email notifications</span>
-              <Toggle enabled={emailNotifications} setEnabled={setEmailNotifications} />
+              <Toggle enabled={emailNotifications} onToggle={() => setEmailNotifications((prev) => !prev)} />
             </div>
             <div className="flex items-center justify-between">
               <span>SMS notifications</span>
-              <Toggle enabled={smsNotifications} setEnabled={setSmsNotifications} />
+              <Toggle enabled={smsNotifications} onToggle={() => setSmsNotifications((prev) => !prev)} />
             </div>
           </div>
         </div>
@@ -133,7 +239,7 @@ const Settings = () => {
             </button>
             <div className="flex items-center justify-between">
               <span>Two-factor authentication</span>
-              <Toggle enabled={twoFactor} setEnabled={setTwoFactor} />
+              <Toggle enabled={twoFactor} onToggle={() => setTwoFactor((prev) => !prev)} />
             </div>
           </div>
         </div>
@@ -147,11 +253,11 @@ const Settings = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span>Dark mode</span>
-              <Toggle enabled={darkMode} setEnabled={setDarkMode} />
+              <Toggle enabled={darkMode} onToggle={() => setDarkMode((prev) => !prev)} />
             </div>
             <div className="flex items-center justify-between">
               <span>Auto-refresh data (1 min)</span>
-              <Toggle enabled={autoRefresh} setEnabled={setAutoRefresh} />
+              <Toggle enabled={autoRefresh} onToggle={() => setAutoRefresh((prev) => !prev)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Measurement Units</label>
