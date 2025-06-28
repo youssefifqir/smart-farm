@@ -562,3 +562,395 @@ export {
     pdfReportsApi, 
     profitabilityMs2Api 
 };
+
+
+//
+// // API pour la détection de maladies
+// const API_BASE_URL_DISEASE = 'http://localhost:5000/api';
+//
+// // Create axios instance for disease detection service
+// const diseaseApi = axios.create({
+//     baseURL: API_BASE_URL_DISEASE,
+//     timeout: 30000, // Plus long timeout pour l'upload d'images
+// });
+//
+// export interface DetectionResult {
+//     id: number;
+//     disease_name: string;
+//     confidence_score: number;
+//     plant_type: string;
+//     created_at: string;
+//     severity: string;
+//     raw_prediction: string;
+// }
+//
+// export interface Recommendation {
+//     id: number;
+//     treatment_type: string;
+//     description: string;
+//     products: string[];
+//     application_method: string;
+//     dosage: string;
+//     frequency: string;
+//     prevention_tips: string[];
+//     urgency_level: string;
+//     recovery_time: string;
+// }
+//
+// export interface DetectionResponse {
+//     success: boolean;
+//     detection: DetectionResult;
+//     recommendation: Recommendation;
+//     error?: string;
+// }
+//
+// export interface HistoryItem {
+//     id: number;
+//     disease_name: string;
+//     confidence_score: number;
+//     plant_type: string;
+//     created_at: string;
+//     recommendation?: {
+//         treatment_type: string;
+//         urgency_level: string;
+//         recovery_time: string;
+//     };
+// }
+//
+// export interface HistoryResponse {
+//     success: boolean;
+//     history: HistoryItem[];
+//     pagination: {
+//         page: number;
+//         per_page: number;
+//         total: number;
+//         pages: number;
+//         has_next: boolean;
+//         has_prev: boolean;
+//     };
+//     error?: string;
+// }
+//
+// export interface DetectionDetailsResponse {
+//     success: boolean;
+//     detection: DetectionResult;
+//     recommendation: Recommendation | null;
+//     error?: string;
+// }
+//
+// // Service pour la détection de maladies
+// export const diseaseDetectionService = {
+//     /**
+//      * Analyser une image pour détecter les maladies
+//      */
+//     detectDisease: async (imageFile: File): Promise<DetectionResponse> => {
+//         try {
+//             const formData = new FormData();
+//             formData.append('image', imageFile);
+//
+//             const response = await diseaseApi.post('/disease/detect', formData, {
+//                 headers: {
+//                     'Content-Type': 'multipart/form-data',
+//                 },
+//             });
+//
+//             return response.data;
+//         } catch (error: unknown) {
+//             console.error('Erreur lors de la détection:', error);
+//
+//             // Gestion des erreurs HTTP
+//             if (error && typeof error === 'object' && 'response' in error) {
+//                 const axiosError = error as any;
+//                 throw new Error(axiosError.response?.data?.error || 'Erreur lors de l\'analyse');
+//             } else if (error && typeof error === 'object' && 'request' in error) {
+//                 throw new Error('Impossible de contacter le serveur');
+//             } else {
+//                 throw new Error('Erreur lors de l\'analyse de l\'image');
+//             }
+//         }
+//     },
+//
+//     /**
+//      * Obtenir l'historique des détections
+//      */
+//     getDetectionHistory: async (page = 1, perPage = 10): Promise<HistoryResponse> => {
+//         try {
+//             const response = await diseaseApi.get('/disease/history', {
+//                 params: { page, per_page: perPage }
+//             });
+//
+//             return response.data;
+//         } catch (error: unknown) {
+//             console.error('Erreur lors de la récupération de l\'historique:', error);
+//
+//             if (error && typeof error === 'object' && 'response' in error) {
+//                 const axiosError = error as any;
+//                 throw new Error(axiosError.response?.data?.error || 'Erreur lors de la récupération de l\'historique');
+//             } else {
+//                 throw new Error('Impossible de récupérer l\'historique');
+//             }
+//         }
+//     },
+//
+//     /**
+//      * Obtenir les détails d'une détection spécifique
+//      */
+//     getDetectionDetails: async (detectionId: number): Promise<DetectionDetailsResponse> => {
+//         try {
+//             const response = await diseaseApi.get(`/disease/${detectionId}`);
+//             return response.data;
+//         } catch (error: unknown) {
+//             console.error('Erreur lors de la récupération des détails:', error);
+//
+//             if (error && typeof error === 'object' && 'response' in error) {
+//                 const axiosError = error as any;
+//                 throw new Error(axiosError.response?.data?.error || 'Erreur lors de la récupération des détails');
+//             } else {
+//                 throw new Error('Impossible de récupérer les détails');
+//             }
+//         }
+//     }
+// };
+
+// API pour la détection de maladies
+const API_BASE_URL_DISEASE = 'http://localhost:5000/api';
+
+// Create axios instance for disease detection service
+const diseaseApi = axios.create({
+    baseURL: API_BASE_URL_DISEASE,
+    timeout: 30000, // Plus long timeout pour l'upload d'images
+});
+
+export interface DetectionResult {
+    id: number;
+    disease_name: string;
+    confidence_score: number;
+    plant_type: string;
+    created_at: string;
+    severity: string;
+    raw_prediction: string;
+}
+
+export interface Recommendation {
+    id: number;
+    treatment_type: string;
+    description: string;
+    products: string[];
+    application_method: string;
+    dosage: string;
+    frequency: string;
+    prevention_tips: string[];
+    urgency_level: string;
+    recovery_time: string;
+}
+
+export interface DetectionResponse {
+    success: boolean;
+    detection: DetectionResult;
+    recommendation: Recommendation;
+    error?: string;
+}
+
+export interface HistoryItem {
+    id: number;
+    disease_name: string;
+    confidence_score: number;
+    plant_type: string;
+    created_at: string;
+    recommendation?: {
+        treatment_type: string;
+        urgency_level: string;
+        recovery_time: string;
+    };
+}
+
+export interface HistoryResponse {
+    success: boolean;
+    history: HistoryItem[];
+    pagination: {
+        page: number;
+        per_page: number;
+        total: number;
+        pages: number;
+        has_next: boolean;
+        has_prev: boolean;
+    };
+    error?: string;
+}
+
+export interface DetectionDetailsResponse {
+    success: boolean;
+    detection: DetectionResult;
+    recommendation: Recommendation | null;
+    error?: string;
+}
+
+// Utilitaires pour la gestion du fuseau horaire
+export const timezoneUtils = {
+    /**
+     * Convertit une date UTC en fuseau horaire du Maroc (Africa/Casablanca)
+     */
+    convertToMoroccanTime: (utcDateString: string): string => {
+        const date = new Date(utcDateString);
+
+        // Créer un objet Date avec le fuseau horaire du Maroc
+        const moroccanDate = new Date(date.toLocaleString("en-US", {
+            timeZone: "Africa/Casablanca"
+        }));
+
+        return moroccanDate.toISOString();
+    },
+
+    /**
+     * Formate une date pour l'affichage au Maroc
+     */
+    formatDateForMorocco: (dateString: string, options?: Intl.DateTimeFormatOptions): string => {
+        const date = new Date(dateString);
+
+        const defaultOptions: Intl.DateTimeFormatOptions = {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZone: "Africa/Casablanca",
+            hour12: false // Format 24h
+        };
+
+        return date.toLocaleString("fr-MA", { ...defaultOptions, ...options });
+    },
+
+    /**
+     * Formate une date pour l'affichage en français avec fuseau horaire Maroc
+     */
+    formatDateFrench: (dateString: string): string => {
+        const date = new Date(dateString);
+
+        return date.toLocaleString("fr-FR", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZone: "Africa/Casablanca",
+            hour12: false
+        });
+    },
+
+    /**
+     * Obtient la date actuelle au Maroc
+     */
+    getCurrentMoroccanTime: (): string => {
+        const now = new Date();
+        return now.toLocaleString("en-US", {
+            timeZone: "Africa/Casablanca"
+        });
+    },
+
+    /**
+     * Convertit une date locale en UTC pour l'envoi au serveur
+     */
+    convertLocalToUTC: (localDateString: string): string => {
+        const localDate = new Date(localDateString);
+        return localDate.toISOString();
+    }
+};
+
+// Service pour la détection de maladies
+export const diseaseDetectionService = {
+    /**
+     * Analyser une image pour détecter les maladies
+     */
+    detectDisease: async (imageFile: File): Promise<DetectionResponse> => {
+        try {
+            const formData = new FormData();
+            formData.append('image', imageFile);
+
+            const response = await diseaseApi.post('/disease/detect', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            // Traiter la réponse pour ajuster les dates
+            const data = response.data;
+            if (data.success && data.detection) {
+                // Convertir la date au fuseau horaire du Maroc
+                data.detection.created_at = timezoneUtils.convertToMoroccanTime(data.detection.created_at);
+            }
+
+            return data;
+        } catch (error: unknown) {
+            console.error('Erreur lors de la détection:', error);
+
+            // Gestion des erreurs HTTP
+            if (error && typeof error === 'object' && 'response' in error) {
+                const axiosError = error as any;
+                throw new Error(axiosError.response?.data?.error || 'Erreur lors de l\'analyse');
+            } else if (error && typeof error === 'object' && 'request' in error) {
+                throw new Error('Impossible de contacter le serveur');
+            } else {
+                throw new Error('Erreur lors de l\'analyse de l\'image');
+            }
+        }
+    },
+
+    /**
+     * Obtenir l'historique des détections
+     */
+    getDetectionHistory: async (page = 1, perPage = 10): Promise<HistoryResponse> => {
+        try {
+            const response = await diseaseApi.get('/disease/history', {
+                params: { page, per_page: perPage }
+            });
+
+            const data = response.data;
+
+            // Traiter la réponse pour ajuster les dates
+            if (data.success && data.history) {
+                data.history = data.history.map((item: HistoryItem) => ({
+                    ...item,
+                    created_at: timezoneUtils.convertToMoroccanTime(item.created_at)
+                }));
+            }
+
+            return data;
+        } catch (error: unknown) {
+            console.error('Erreur lors de la récupération de l\'historique:', error);
+
+            if (error && typeof error === 'object' && 'response' in error) {
+                const axiosError = error as any;
+                throw new Error(axiosError.response?.data?.error || 'Erreur lors de la récupération de l\'historique');
+            } else {
+                throw new Error('Impossible de récupérer l\'historique');
+            }
+        }
+    },
+
+    /**
+     * Obtenir les détails d'une détection spécifique
+     */
+    getDetectionDetails: async (detectionId: number): Promise<DetectionDetailsResponse> => {
+        try {
+            const response = await diseaseApi.get(`/disease/${detectionId}`);
+
+            const data = response.data;
+
+            // Traiter la réponse pour ajuster les dates
+            if (data.success && data.detection) {
+                data.detection.created_at = timezoneUtils.convertToMoroccanTime(data.detection.created_at);
+            }
+
+            return data;
+        } catch (error: unknown) {
+            console.error('Erreur lors de la récupération des détails:', error);
+
+            if (error && typeof error === 'object' && 'response' in error) {
+                const axiosError = error as any;
+                throw new Error(axiosError.response?.data?.error || 'Erreur lors de la récupération des détails');
+            } else {
+                throw new Error('Impossible de récupérer les détails');
+            }
+        }
+    }
+};

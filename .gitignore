@@ -9,5 +9,66 @@ frontend/dist/
 *.log
 .DS_Store
 .env
-.vscode/ 
-.vscode/ 
+.vscode/
+.vscode/
+
+
+# === Java (Spring Boot backend) ===
+backend-ms1/target/
+
+# === Node.js / Frontend ===
+smart-farm-frontend-v1/node_modules/
+smart-farm-frontend-v1/dist/
+smart-farm-frontend-v1/npm-debug.log
+smart-farm-frontend-v1/yarn-error.log
+smart-farm-frontend-v1/.env.local
+smart-farm-frontend-v1/.env.development.local
+smart-farm-frontend-v1/.env.test.local
+smart-farm-frontend-v1/.env.production.local
+smart-farm-frontend-v1/.parcel-cache/
+
+# === Python / Flask backend ===
+smart-farm_backend-ms2/__pycache__/
+smart-farm_backend-ms2/*.py[cod]
+smart-farm_backend-ms2/*.pyo
+smart-farm_backend-ms2/*.pyd
+smart-farm_backend-ms2/*.so
+smart-farm_backend-ms2/*.egg
+smart-farm_backend-ms2/*.egg-info/
+smart-farm_backend-ms2/dist/
+smart-farm_backend-ms2/build/
+smart-farm_backend-ms2/.venv/
+smart-farm_backend-ms2/venv/
+smart-farm_backend-ms2/ENV/
+smart-farm_backend-ms2/env/
+smart-farm_backend-ms2/instance/
+smart-farm_backend-ms2/*.db
+smart-farm_backend-ms2/*.sqlite3
+smart-farm_backend-ms2/htmlcov/
+smart-farm_backend-ms2/.coverage
+smart-farm_backend-ms2/.tox/
+smart-farm_backend-ms2/.nox/
+smart-farm_backend-ms2/.pytest_cache/
+smart-farm_backend-ms2/.cache/
+smart-farm_backend-ms2/.ipynb_checkpoints/
+smart-farm_backend-ms2/static/uploads/
+
+# === IDEs ===
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# === Logs & Debug ===
+*.log
+*.pot
+*.mo
+*.pid
+
+# === OS spécifiques ===
+.DS_Store
+Thumbs.db
+
+# === Docker volumes (si utilisés) ===
+postgres-data/
+
